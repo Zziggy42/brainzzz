@@ -96,6 +96,11 @@ const server = http.createServer((req, res) => {
       res.writeHead(out.error ? 400 : 200, { 'content-type': 'application/json', 'cache-control': 'no-store' });
       res.end(JSON.stringify(out));
     });
+  } else if (pathname === '/config') {
+    // the token's contract address, set as TOKEN_CA in Railway's Variables (optional TOKEN_URL for a link)
+    const ca = String(process.env.TOKEN_CA || '').trim(), url = String(process.env.TOKEN_URL || '').trim();
+    res.writeHead(200, { 'content-type': 'application/json', 'cache-control': 'no-store' });
+    res.end(JSON.stringify({ ca: /^[1-9A-HJ-NP-Za-km-z]{32,48}$/.test(ca) ? ca : null, url: /^https:\/\/[^\s"<>]+$/.test(url) ? url : null }));
   } else if (pathname === '/trending') {
     getTrending().then(t => {
       res.writeHead(200, { 'content-type': 'application/json', 'cache-control': 'no-store' });

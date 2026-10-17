@@ -27,6 +27,12 @@
   .tk b { color:#e9e4da; font-weight:400; } .tk .tkh { color:#c8f; } .tk .up { color:#4ade80; } .tk .dn { color:#f05252; }
   @keyframes tick { to { transform:translateX(-50%); } }
   @media (prefers-reduced-motion: reduce) { .tk { animation:none; } }
+  .cabar { display:flex; align-items:center; justify-content:center; flex-wrap:wrap; gap:8px 12px; padding:8px 16px; border-bottom:1px solid #2e2220; background:rgba(16,11,11,.9); font-family:VT323, monospace; font-size:20px; }
+  .cabar .calabel { color:#ffd36a; letter-spacing:2px; }
+  .cabar code { font-family:VT323, monospace; color:#e9e4da; background:#0d0a0a; border:1px solid #3a2a26; padding:2px 10px; max-width:100%; overflow-wrap:anywhere; user-select:all; }
+  .cabar code.soon { color:var(--dim); }
+  .cabar button { font-size:14px; padding:4px 12px; }
+  .cabar a { color:#3affb0; font-size:18px; }
   .land { max-width:1180px; margin:0 auto; padding-block:clamp(24px, 6vh, 64px) 24px; padding-inline:max(20px, env(safe-area-inset-left, 0px)); display:grid; grid-template-columns:minmax(0, 470px) minmax(0, 1fr); gap:clamp(24px, 6vw, 88px); align-items:start; }
   .hero { display:flex; flex-direction:column; gap:14px; }
   .eyebrow { font-family:VT323, monospace; font-size:19px; letter-spacing:2px; color:#d9c9a8; text-transform:uppercase; }
@@ -261,9 +267,15 @@
 
 <div id="menu" class="overlay">
   <div class="ticker" aria-hidden="true"><div class="tk" id="ticker"></div></div>
+  <div class="cabar" id="cabar">
+    <span class="calabel">CA:</span>
+    <code id="caText">coming soon</code>
+    <button id="caCopy" class="ghost hidden" aria-label="Copy contract address">Copy</button>
+    <a id="caLink" class="hidden" target="_blank" rel="noopener noreferrer">View chart ↗</a>
+  </div>
   <div class="land">
     <section class="hero">
-      <div class="eyebrow">Co-op zombie survival <i>·</i> 1–8 players <i>·</i> free in your browser</div>
+      <div class="eyebrow">Co-op zombie survival <i>·</i> solo, duo or squad of 4 <i>·</i> free in your browser</div>
       <h1 class="title">Dead Shift</h1>
       <div class="reel">Now showing: <b>Final Reel</b></div>
       <p class="pitch">An abandoned cinema. The power's out, the doors are boarded up, and something is climbing through the windows. Clear a path to the theater, get the projector running and find out how many rounds your crew can last.</p>
@@ -3631,6 +3643,21 @@ async function loadTrending() {
   try { const d = await (await fetch('trending', { cache: 'no-store' })).json(); if (d.list && d.list.length) { renderTicker(d.list.map(c => ['$' + c.s, c.c]), true); boardCoins = d.list.map(c => ['$' + c.s, c.c]); boardCoins.live = true; } } catch (e) {}
 }
 loadTrending(); setInterval(loadTrending, 120000);
+// contract address bar (set TOKEN_CA on the server; shows "coming soon" until then)
+async function loadCA() {
+  if (!(await useRelay())) return;
+  try {
+    const d = await (await fetch('config', { cache: 'no-store' })).json();
+    if (d.ca) { $('caText').textContent = d.ca; $('caText').classList.remove('soon'); $('caCopy').classList.remove('hidden'); }
+    if (d.url) { $('caLink').href = d.url; $('caLink').classList.remove('hidden'); }
+  } catch (e) {}
+}
+$('caText').classList.add('soon'); loadCA();
+$('caCopy').onclick = () => {
+  const t = $('caText').textContent, done = () => { $('caCopy').textContent = 'Copied'; setTimeout(() => $('caCopy').textContent = 'Copy', 1500); };
+  const fallback = () => { const r = document.createRange(); r.selectNodeContents($('caText')); const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r); try { document.execCommand('copy'); done(); } catch (e) {} };
+  if (navigator.clipboard) navigator.clipboard.writeText(t).then(done, fallback); else fallback();
+};
 loadLeaderboard();
 $('cast').innerHTML = CHAR_IDS.map(id => `<figure><img src="${portrait(id)}" alt=""><figcaption>${CHARACTERS[id].name}</figcaption></figure>`).join('');
 
