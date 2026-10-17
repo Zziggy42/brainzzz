@@ -22,6 +22,11 @@
     background:linear-gradient(90deg, rgba(7,6,10,.94) 0%, rgba(7,6,10,.82) 42%, rgba(7,6,10,.6) 72%, rgba(7,6,10,.78) 100%); }
   #menu::before { content:""; position:fixed; inset:0; pointer-events:none; z-index:-1;
     background:repeating-linear-gradient(0deg, rgba(0,0,0,.18) 0 1px, transparent 1px 3px); }
+  .ticker { overflow:hidden; border-bottom:1px solid #2e2220; background:rgba(7,6,10,.85); font-family:VT323, monospace; font-size:20px; letter-spacing:1px; white-space:nowrap; }
+  .tk { display:inline-flex; gap:34px; padding:6px 0; animation:tick 40s linear infinite; }
+  .tk b { color:#e9e4da; font-weight:400; } .tk .up { color:#4ade80; } .tk .dn { color:#f05252; }
+  @keyframes tick { to { transform:translateX(-50%); } }
+  @media (prefers-reduced-motion: reduce) { .tk { animation:none; } }
   .land { max-width:1180px; margin:0 auto; padding-block:clamp(24px, 6vh, 64px) 24px; padding-inline:max(20px, env(safe-area-inset-left, 0px)); display:grid; grid-template-columns:minmax(0, 470px) minmax(0, 1fr); gap:clamp(24px, 6vw, 88px); align-items:start; }
   .hero { display:flex; flex-direction:column; gap:14px; }
   .eyebrow { font-family:VT323, monospace; font-size:19px; letter-spacing:2px; color:#d9c9a8; text-transform:uppercase; }
@@ -255,6 +260,7 @@
 <body>
 
 <div id="menu" class="overlay">
+  <div class="ticker" aria-hidden="true"><div class="tk" id="ticker"></div></div>
   <div class="land">
     <section class="hero">
       <div class="eyebrow">Co-op zombie survival <i>·</i> 1–8 players <i>·</i> free in your browser</div>
@@ -395,6 +401,7 @@
 <div id="pause" class="overlay hidden" style="pointer-events:auto">
   <h2>Click to play</h2>
   <div style="color:var(--dim)">The horde doesn't pause. Press Esc to free your mouse.</div>
+  <button id="leaveBtn" class="ghost" style="margin-top:22px">Leave to main menu</button>
 </div>
 
 <div id="over" class="overlay hidden">
@@ -403,7 +410,7 @@
   <table id="overStats"></table>
   <div id="overRank"></div>
   <div class="lbwrap" id="overBoard" hidden></div>
-  <button id="againBtn">Play again</button>
+  <div class="row" style="gap:10px;width:min(420px,92vw)"><button id="againBtn">Play again</button><button id="menuBtn" class="ghost">Main menu</button></div>
   <div id="overWait" style="color:var(--dim)">Waiting for host to restart…</div>
 </div>
 
@@ -429,7 +436,7 @@ const CELL = 3, EYE = 1.62, BASE_HP = 150, MAX_ALIVE = 24, BOX_COST = 950, TRAP_
 //    0-7 doors          T  teleporter pad   M  mainframe          Z  power switch
 //    U  upgrade machine ,  upgrade-room floor (sealed)   V J Q H perk machines
 // =====================================================================
-const MW = 52, MH = 43;
+const MW = 80, MH = 46; // Kino uses columns 0-51; Nacht der Untoten's two floors sit at columns 53-79
 const ROOMS = [
   { id: 'pap',     name: 'Projector Room', c0: 14, r0: 1,  c1: 25, r1: 3,  h: 4,   floor: 'obsidian', wall: 'obsidian' },
   { id: 'stage',   name: 'Stage',          c0: 10, r0: 5,  c1: 29, r1: 8,  h: 8,   floor: 'plank',    wall: 'dark' },
@@ -446,12 +453,18 @@ const ROOMS = [
   { id: 'boxoff',  name: 'Box Office',     c0: 31, r0: 27, c1: 38, r1: 40, h: 4.6, floor: 'tile',     wall: 'paperRed' },
   { id: 'shop',    name: 'Workshop',       c0: 10, r0: 34, c1: 29, r1: 41, h: 5,   floor: 'plank',    wall: 'stone' },
   { id: 'boiler',  name: 'Boiler Room',    c0: 1,  r0: 28, c1: 8,  r1: 41, h: 5,   floor: 'grate',    wall: 'brick' },
+  // Nacht der Untoten (stamped from its own blueprint below, so these only name the areas and set floors/walls)
+  { id: 'n_hall',  name: 'Nacht · Entrance Hall',   c0: 55, r0: 3,  c1: 64, r1: 7,  h: 3.6, floor: 'plank',  wall: 'dark',  stamp: true },
+  { id: 'n_help',  name: 'Nacht · HELP Room',       c0: 55, r0: 9,  c1: 63, r1: 18, h: 3.6, floor: 'cobble', wall: 'brick', stamp: true },
+  { id: 'n_main',  name: 'Nacht · Main Room',       c0: 64, r0: 8,  c1: 77, r1: 20, h: 3.6, floor: 'plank',  wall: 'dark',  stamp: true },
+  { id: 'n_upw',   name: 'Nacht · Upstairs West',   c0: 55, r0: 26, c1: 64, r1: 41, h: 3.4, floor: 'plank',  wall: 'brick', stamp: true },
+  { id: 'n_upe',   name: 'Nacht · Upstairs East',   c0: 65, r0: 31, c1: 77, r1: 43, h: 3.4, floor: 'plank',  wall: 'brick', stamp: true },
 ];
 const G = Array.from({ length: MH }, () => Array(MW).fill('#'));
 const HGT = Array.from({ length: MH }, () => Array(MW).fill(0));
 const fill = (c0, r0, c1, r1, k) => { for (let r = r0; r <= r1; r++) for (let c = c0; c <= c1; c++) G[r][c] = k; };
 const put = (c, r, k) => { G[r][c] = k; };
-for (const R of ROOMS) fill(R.c0, R.r0, R.c1, R.r1, R.id === 'pap' ? ',' : '.');
+for (const R of ROOMS) if (!R.stamp) fill(R.c0, R.r0, R.c1, R.r1, R.id === 'pap' ? ',' : '.');
 // stage (raised) with half-block steps down into the seats
 fill(10, 5, 29, 8, '^');
 for (const c of [12, 13, 19, 20, 26, 27]) put(c, 8, '_');
@@ -502,6 +515,36 @@ for (const [c, r] of [
   [10, 41], [29, 41], [10, 34], [29, 34],          // workshop
   [1, 28], [8, 41], [1, 41],                       // boiler room
 ]) put(c, r, 'S');
+
+// ---------------- Nacht der Untoten: a two-floor bonus map behind the Projector Room ----------------
+// Blueprint from nacht_layout.json (27x23 per floor), with a wall added so the HELP room sits behind its door.
+//   i = HELP door ($1000)   j = HELP-room stairs   k = main-room stairs (each $1000 to clear; they link the floors)
+const NACHT = { ox: 53, gy: 0, uy: 23 };
+const W27 = '#'.repeat(27), HALL = '##..........###############';
+const NACHT_GROUND = [W27, W27, W27, HALL, HALL, HALL, HALL, HALL,
+  '###########........kkkk..##', '##.........##......kkkk..##', '##.........##......kkkk..##',
+  '##.........ii............##', '##.........ii............##',
+  '##.........##............##', '##.........##............##', '##.........##............##', '##.........##............##',
+  '##.jjj.....##............##', '##.jjj.....##............##',
+  '############.............##', '############.............##', W27, W27];
+const NACHT_UPPER = [W27, W27, W27, HALL, HALL, HALL, HALL, HALL,
+  '##.................kkkk..##', '##.........##......kkkk..##', '##.........##......kkkk..##',
+  '##.........##............##', '##.........##............##',
+  '##.......................##', '##.......................##',  // hallway between the west and east rooms
+  '##.........##............##', '##.........##............##',
+  '##.jjj.....##............##', '##.jjj.....##............##',
+  '############.............##', '############.............##', W27, W27];
+const NG = (c, r) => [NACHT.ox + c, NACHT.gy + r], NU = (c, r) => [NACHT.ox + c, NACHT.uy + r];
+const stampRows = (rows, ox, oy) => rows.forEach((row, r) => { for (let c = 0; c < row.length; c++) G[oy + r][ox + c] = row[c]; });
+stampRows(NACHT_GROUND, NACHT.ox, NACHT.gy); stampRows(NACHT_UPPER, NACHT.ox, NACHT.uy);
+for (const [c, r] of [[2, 6], [2, 13], [6, 3], [10, 3], [6, 18], [15, 8], [24, 11], [24, 18], [18, 20]]) put(...NG(c, r), 'S');
+for (const [c, r] of [[2, 6], [2, 13], [10, 3], [8, 18], [15, 8], [24, 12], [24, 18]]) put(...NU(c, r), 'S');
+put(...NG(5, 9), 'X');   // fixed mystery box in the HELP room
+put(...NG(8, 3), 'R');   // return portal to Kino
+put(25, 2, 'N');         // Kino: the Nacht Door, in the projector room
+const NACHT_ARRIVAL = [[4, 5], [5, 6], [6, 5], [4, 7], [7, 6], [3, 4]].map(([c, r]) => NG(c, r));
+const KINO_RETURN = [[23, 2], [22, 1], [22, 3], [21, 2]];  // projector room, next to the Nacht Door
+const NACHT_ROUND = 10, NACHT_COST = 5000;
 for (let r = 0; r < MH; r++) for (let c = 0; c < MW; c++) {
   const k = G[r][c];
   if (k === '^') HGT[r][c] = 1; else if (k === '_') HGT[r][c] = .5;
@@ -510,7 +553,9 @@ for (const [c, r] of [[19, 6], [27, 5], [11, 21]]) HGT[r][c] = 1; // pad, power,
 const MAP = G.map(row => row.join(''));
 
 const DOORS = { '0': 0, '1': 750, '2': 750, '3': 1000, '4': 1000, '5': 1250, '6': 1000, '7': 1000,
-  a: 1250, b: 1000, c: 1000, d: 1000, e: 1250, f: 1000, g: 1000, h: 1000 };
+  a: 1250, b: 1000, c: 1000, d: 1000, e: 1250, f: 1000, g: 1000, h: 1000,
+  i: 1000, j: 1000, k: 1000 }; // i-k are Nacht: HELP door, HELP stairs, main-room stairs
+const STAIRS = { j: 'HELP-room stairs', k: 'main-room stairs' };
 const PERKS = {
   V: { name: 'Second Wind', cost: 1500, col: '#4af', hex: 0x44aaff, desc: 'faster revives · solo self-revive' },
   J: { name: 'Iron Gut', cost: 2500, col: '#e33', hex: 0xee3333, desc: 'take more hits' },
@@ -534,7 +579,11 @@ const WEAPONS = {
   ar:      { name: 'Assault Rifle',  dmg: 90,   rpm: 620, auto: true,  mag: 30,  res: 240, reload: 2.3, spread: .016, pellets: 1, color: 0x3a4230, len: .8,  pitch: 1.0, cost: 1200 },
   shotgun: { name: 'Pump Shotgun',   dmg: 50,   rpm: 72,  auto: false, mag: 6,   res: 54,  reload: 2.6, spread: .085, pellets: 8, color: 0x5a3820, len: .8,  pitch: .55, cost: 1200 },
   lmg:     { name: 'Ripsaw LMG',     dmg: 110,  rpm: 700, auto: true,  mag: 100, res: 400, reload: 4.0, spread: .03,  pellets: 1, color: 0x222222, len: .95, pitch: .8 },
-  sniper:  { name: 'Longshot',       dmg: 900,  rpm: 55,  auto: false, mag: 5,   res: 50,  reload: 3.0, spread: .0008,pellets: 1, color: 0x34452f, len: 1.1, pitch: .45 },
+  sniper:  { name: 'Longshot',       dmg: 900,  rpm: 55,  auto: false, mag: 5,   res: 50,  reload: 3.0, spread: .0008,pellets: 1, color: 0x34452f, len: 1.1, pitch: .45, cost: 3000 },
+  tommy:   { name: 'Tommy Gun',      dmg: 65,   rpm: 720, auto: true,  mag: 30,  res: 180, reload: 2.4, spread: .03,  pellets: 1, color: 0x5a3a20, len: .65, pitch: 1.1, cost: 1200 },
+  boltrifle: { name: 'Bolt Rifle',   dmg: 260,  rpm: 60,  auto: false, mag: 5,   res: 50,  reload: 2.6, spread: .004, pellets: 1, color: 0x5a3a1e, len: 1.0, pitch: .6,  cost: 200 },
+  bar:     { name: 'Battle Rifle',   dmg: 115,  rpm: 450, auto: true,  mag: 20,  res: 180, reload: 2.6, spread: .02,  pellets: 1, color: 0x3a3220, len: .95, pitch: .8,  cost: 1800 },
+  sawed:   { name: 'Sawed-Off',      dmg: 75,   rpm: 180, auto: false, mag: 2,   res: 40,  reload: 1.8, spread: .14,  pellets: 8, color: 0x4a2a14, len: .45, pitch: .45, cost: 1200 },
   // nerfed: direct hit 1000 (was 1500 to everything within 3.5m), splash 300 that falls off over 2.5m, less ammo
   blaster: { name: 'Ion Blaster',    dmg: 1000, rpm: 180, auto: false, mag: 20,  res: 120, reload: 2.8, spread: .006, pellets: 1, color: 0x10a080, len: .5,  pitch: 2.4, splash: 2.5, splashDmg: 300 },
   // wonder weapon, built at the workbench: a cone blast that throws zombies back
@@ -554,6 +603,12 @@ const WALL_GUNS = [
   { id: 'l', w: 'smg', c: 0, r: 34, f: [1, 0] },                                                           // boiler room
   { id: 'm', w: 'mpistol', c: 39, r: 33, f: [-1, 0] },                                                     // box office
   { id: 'n', w: 'grease', c: 51, r: 20, f: [-1, 0] },                                                      // loading dock
+  // Nacht ground floor
+  { id: 'o', w: 'tommy', c: 54, r: 12, f: [1, 0] }, { id: 'p', w: 'dbarrel', c: 62, r: 2, f: [0, 1] },
+  { id: 'q', w: 'boltrifle', c: 68, r: 21, f: [0, -1] }, { id: 'r', w: 'carbine', c: 78, r: 16, f: [-1, 0] },
+  // Nacht upstairs
+  { id: 's', w: 'trench', c: 57, r: 25, f: [0, 1] }, { id: 't', w: 'bar', c: 54, r: 35, f: [1, 0] },
+  { id: 'u', w: 'sniper', c: 65, r: 30, f: [0, 1] }, { id: 'v', w: 'sawed', c: 78, r: 36, f: [-1, 0] },
 ];
 // buildables: each part spawns at one of its spots; assemble them at the workbench
 const BUILDS = {
@@ -572,7 +627,8 @@ const TRAPS = [
 ];
 const upCache = {};
 const WEAPON_CLASS = { pistol: 'smg', mpistol: 'smg', smg: 'smg', grease: 'smg', csmg: 'smg', carbine: 'rifle', compact: 'rifle', ar: 'rifle', lmg: 'rifle',
-  dbarrel: 'shotgun', trench: 'shotgun', shotgun: 'shotgun', sniper: 'sniper', blaster: 'special', proj: 'special' };
+  dbarrel: 'shotgun', trench: 'shotgun', shotgun: 'shotgun', sniper: 'sniper', blaster: 'special', proj: 'special',
+  tommy: 'smg', boltrifle: 'rifle', bar: 'rifle', sawed: 'shotgun' };
 // how each gun looks in your hands
 const LOOK = {
   pistol:  { kind: 'pistol' },
@@ -590,6 +646,10 @@ const LOOK = {
   sniper:  { kind: 'rifle', mag: 'box', stock: 'wood', fore: 'wood', bolt: true },
   blaster: { kind: 'ray' },
   proj:    { kind: 'cannon' },
+  tommy:   { kind: 'smg', mag: 'drum', stock: 'wood', fore: 'wood' },
+  boltrifle: { kind: 'rifle', stock: 'wood', fore: 'wood', bolt: true },
+  bar:     { kind: 'rifle', mag: 'box', stock: 'wood', fore: 'wood', bipod: true },
+  sawed:   { kind: 'double', stock: 'none' },
 };
 const BASE_SIGHT = { sniper: 'scope', smg: 'dot', ar: 'dot' };
 // fov when aiming, how much aiming tightens spread, how high the sight sits above the barrel
@@ -621,7 +681,7 @@ function defOf(w) {
   }
   return (upCache[key] = o);
 }
-const BOX_POOL = ['carbine', 'dbarrel', 'mpistol', 'compact', 'smg', 'grease', 'trench', 'csmg', 'ar', 'shotgun', 'lmg', 'lmg', 'sniper', 'sniper', 'blaster'];
+const BOX_POOL = ['carbine', 'dbarrel', 'mpistol', 'compact', 'smg', 'grease', 'trench', 'csmg', 'ar', 'shotgun', 'lmg', 'lmg', 'sniper', 'sniper', 'blaster', 'tommy', 'bar'];
 // Playable survivors: blocky caricatures, no logos.
 const CHARACTERS = {
   elon:  { name: 'Elon Musk',     skin: '#e6bca2', hair: '#3a2a1e', style: 'short',    shirt: '#1b1b1d', pants: '#18181c', eye: '#355a7a' },
@@ -653,15 +713,15 @@ const DROP_INFO = { maxammo: ['MAX AMMO', '#7cf'], insta: ['INSTA-KILL', '#f55']
 const FLOOR_CH = '.SPT,^_';
 
 // lookups
-const doorCells = {}, spawnCells = [], playerSpawns = [], perkCells = {}, papCells = [], boxCells = [];
-let padCell, mainCell, powerCell, upgCell, benchCell;
+const doorCells = {}, doorCellsAll = {}, spawnCells = [], playerSpawns = [], perkCells = {}, papCells = [], boxCells = [];
+let padCell, mainCell, powerCell, upgCell, benchCell, nachtDoorCell, returnCell;
 let doorsOpen = {};
 const ch = (c, r) => (r < 0 || r >= MH || c < 0 || c >= MW) ? '#' : MAP[r][c];
 const hgt = (c, r) => (r < 0 || r >= MH || c < 0 || c >= MW) ? 0 : HGT[r][c];
 const isFloorChar = k => FLOOR_CH.includes(k);
 for (let r = 0; r < MH; r++) for (let c = 0; c < MW; c++) {
   const k = MAP[r][c];
-  if (DOORS[k] !== undefined) doorCells[k] = [c, r];
+  if (DOORS[k] !== undefined) { doorCells[k] = doorCells[k] || [c, r]; (doorCellsAll[k] = doorCellsAll[k] || []).push([c, r]); }
   else if (PERKS[k]) perkCells[k] = [c, r];
   else if (k === 'S') spawnCells.push([c, r]);
   else if (k === 'P') playerSpawns.push([c, r]);
@@ -671,8 +731,16 @@ for (let r = 0; r < MH; r++) for (let c = 0; c < MW; c++) {
   else if (k === 'Z') powerCell = [c, r];
   else if (k === 'U') upgCell = [c, r];
   else if (k === 'W') benchCell = [c, r];
+  else if (k === 'N') nachtDoorCell = [c, r];
+  else if (k === 'R') returnCell = [c, r];
   else if (k === ',') papCells.push([c, r]);
 }
+// staircases: each stair cell on the ground floor links to the same cell upstairs (and back)
+const LINK = {};
+for (const id in STAIRS) for (const [c, r] of doorCellsAll[id]) if (r < NACHT.uy) {
+  const up = r + NACHT.uy - NACHT.gy; LINK[r * MW + c] = up * MW + c; LINK[up * MW + c] = r * MW + c;
+}
+const NACHT_BOX = boxCells.findIndex(([c, r]) => c === NG(5, 9)[0] && r === NG(5, 9)[1]);
 const LOBBY_BOX = boxCells.findIndex(([c, r]) => c === 11 && r === 21); // box starts on the lobby balcony
 const trapAt = {};
 TRAPS.forEach((t, i) => t.cells.forEach(([c, r]) => trapAt[r * MW + c] = i));
@@ -857,6 +925,7 @@ function initHost() {
     activeSpawns: [], power: false, linked: false, tpCool: 0, papT: 0,
     traps: TRAPS.map(() => ({ on: 0, cd: 0, tick: 0 })),
     mode: host ? host.mode : 'duo', startMode: null, departed: [],
+    scene: 'kino', nachtOpen: false, transfer: null,
     special: null, nextDog: 5, nextBoss: 10, bossT: 0, dogHp: 0, fireSale: 0,
     partSpot: PART_LIST.map(pt => Math.floor(Math.random() * pt.spots.length)), partTaken: PART_LIST.map(() => false),
     built: { shield: false, cannon: false }, cannonTaken: false,
@@ -865,8 +934,10 @@ function initHost() {
   recomputeSpawns();
 }
 function recomputeSpawns() {
+  // windows are live in whatever part of the world the team can currently reach
   const seen = new Uint8Array(MW * MH), q = [];
-  for (const [c, r] of playerSpawns) { seen[r * MW + c] = 1; q.push([c, r]); }
+  const seeds = playerList().filter(p => p.sp && !p.dead && !p.pap).map(p => cellOf(p.x, p.z).map((v, i) => clamp(v, 0, i ? MH - 1 : MW - 1)));
+  for (const [c, r] of seeds.length ? seeds : playerSpawns) { seen[r * MW + c] = 1; q.push([c, r]); }
   while (q.length) {
     const [c, r] = q.shift();
     for (const [dc, dr] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
@@ -874,6 +945,8 @@ function recomputeSpawns() {
       if (solidCell(nc, nr) || seen[nr * MW + nc]) continue;
       seen[nr * MW + nc] = 1; q.push([nc, nr]);
     }
+    const li = LINK[r * MW + c];
+    if (li !== undefined && !seen[li]) { seen[li] = 1; q.push([li % MW, (li / MW) | 0]); }
   }
   host.activeSpawns = spawnWindows.filter(w => seen[w.r * MW + w.c]);
 }
@@ -889,10 +962,13 @@ function computeFlow(targets) {
       if (dist[ni] !== -1) continue;
       dist[ni] = dist[idx] + 1; q.push(ni);
     }
+    const li = LINK[idx]; // up or down the Nacht stairs
+    if (li !== undefined && dist[li] === -1) { dist[li] = dist[idx] + 1; q.push(li); }
   }
   return dist;
 }
 function spawnPos(i) {
+  if (host && host.scene === 'nacht') { const [c, r] = NACHT_ARRIVAL[i % NACHT_ARRIVAL.length]; return cellCenter(c, r); }
   const [c, r] = playerSpawns[i % playerSpawns.length];
   const [x, z] = cellCenter(c, r);
   return [x + ((i >> 1) % 3 - 1) * 0.9, z];
@@ -1057,16 +1133,18 @@ function hostBuy(p, m) {
     p.pts -= cost;
     sendTo(p.id, ev('grant', { w: wb.w }));
   } else if (m.k === 'box') {
-    if (H.box || H.boxMove > 0) return msgTo(p, 'The box is busy');
+    const loc = m.loc | 0;
+    if (loc !== H.boxLoc && loc !== NACHT_BOX) return;
+    if (H.box || (loc === H.boxLoc && H.boxMove > 0)) return msgTo(p, 'The box is busy');
     const cost = boxCost();
     if (p.pts < cost) return msgTo(p, 'Not enough points');
     p.pts -= cost; H.boxUses++;
     let w;
-    if (H.boxUses >= 4 && Math.random() < .25) w = 'teddy';
+    if (loc !== NACHT_BOX && H.boxUses >= 4 && Math.random() < .25) w = 'teddy'; // Nacht's box stays put
     else { const pool = BOX_POOL.filter(x => x !== m.cur); w = pool[Math.floor(Math.random() * pool.length)]; }
     if (H.fireSale > 0 && w === 'teddy') { const pool = BOX_POOL.filter(x => x !== m.cur); w = pool[Math.floor(Math.random() * pool.length)]; } // no teddy during a fire sale
-    H.box = { pid: p.id, w, t: 3.2, cost };
-    broadcast(ev('box', { pid: p.id, w, dur: 3.2 }));
+    H.box = { pid: p.id, w, t: 3.2, cost, loc };
+    broadcast(ev('box', { pid: p.id, w, dur: 3.2, loc }));
   } else if (m.k === 'power') {
     if (H.power) return;
     H.power = true;
@@ -1107,6 +1185,19 @@ function hostBuy(p, m) {
     p.pts -= UP_COSTS[tier];
     const mod = tier === 2 ? Object.keys(MODS)[Math.floor(Math.random() * 3)] : null;
     sendTo(p.id, ev('upgraded', { w: m.cur, tier: tier + 1, mod }));
+  } else if (m.k === 'nacht') {
+    if (H.transfer || H.scene !== 'kino') return;
+    if (!H.power) return msgTo(p, 'The Nacht Door needs power');
+    if (!H.nachtOpen) {
+      if (H.round < NACHT_ROUND) return msgTo(p, `The Nacht Door opens from round ${NACHT_ROUND}`);
+      if (p.pts < NACHT_COST) return msgTo(p, 'Not enough points');
+      p.pts -= NACHT_COST; H.nachtOpen = true;
+      feedAll(`${p.name} opened the Nacht Door`, '#c8f');
+    }
+    startTransfer('nacht', p);
+  } else if (m.k === 'return') {
+    if (H.transfer || H.scene !== 'nacht') return;
+    startTransfer('kino', p);
   } else if (m.k === 'part') {
     const i = m.id | 0, pt = PART_LIST[i];
     if (!pt || H.partTaken[i]) return;
@@ -1136,6 +1227,30 @@ function hostBuy(p, m) {
     p.pts -= TRAP_COST; st.on = 20; st.cd = 20 + 40;
     broadcast(ev('trap', { id: m.id, name: p.name }));
   }
+}
+// ---- moving the whole team between Kino and Nacht ----
+function startTransfer(to, p) {
+  host.transfer = { to, t: 5 };
+  broadcast(ev('transfer', { to, name: p.name, t: 5 }));
+}
+function doTransfer(to) {
+  const H = host;
+  H.transfer = null;
+  // nothing gets stranded: zombies left behind go back into the round, a boss returns shortly after
+  for (const z of H.zombies) { if (z.k === 'boss') H.bossT = 12; else H.toSpawn++; }
+  H.zombies.length = 0; H.drops.length = 0;
+  if (H.box) { const q = H.players[H.box.pid]; if (q) q.pts += H.box.cost; H.box = null; broadcast(ev('boxdone')); }
+  H.scene = to; H.linked = false;
+  const dest = to === 'nacht' ? NACHT_ARRIVAL : KINO_RETURN;
+  playerList().filter(p => p.sp).forEach((p, i) => {
+    const [c, r] = dest[i % dest.length], [x, z] = cellCenter(c, r);
+    p.x = x + (i >= dest.length ? .8 : 0); p.z = z;
+    p.pap = to === 'kino'; // back in the projector room: the teleporter takes them to the lobby in 20s
+    sendTo(p.id, ev('tp', { x: p.x, z: p.z, yaw: to === 'nacht' ? -Math.PI / 2 : Math.PI / 2, to }));
+  });
+  H.papT = to === 'kino' ? 20 : 0;
+  H.flow = null; recomputeSpawns();
+  broadcast(ev('scene', { scene: to }));
 }
 function damageZombie(z, dmg, p, head, knife) {
   const mult = host.dbl > 0 ? 2 : 1;
@@ -1258,6 +1373,7 @@ function hostTick(dt) {
   if (H.started && !H.over) {
     H.insta = Math.max(0, H.insta - dt); H.dbl = Math.max(0, H.dbl - dt);
     H.tpCool = Math.max(0, H.tpCool - dt); H.fireSale = Math.max(0, H.fireSale - dt);
+    if (H.transfer && (H.transfer.t -= dt) <= 0) doTransfer(H.transfer.to);
     if (H.bossT > 0 && H.inter <= 0) { H.bossT -= dt; if (H.bossT <= 0) spawnBoss(); }
     if (H.boxMove > 0) H.boxMove -= dt;
     if (H.box) {
@@ -1266,7 +1382,7 @@ function hostTick(dt) {
         const b = H.box; H.box = null;
         if (b.w === 'teddy') {
           const q = H.players[b.pid]; if (q) q.pts += BOX_COST;
-          const others = boxCells.map((_, i) => i).filter(i => i !== H.boxLoc);
+          const others = boxCells.map((_, i) => i).filter(i => i !== H.boxLoc && i !== NACHT_BOX);
           H.boxLoc = others[Math.floor(Math.random() * others.length)]; H.boxUses = 0; H.boxMove = 5;
           broadcast(ev('boxmove', { loc: H.boxLoc, room: roomAt(...boxCells[H.boxLoc]).name }));
         } else sendTo(b.pid, ev('grant', { w: b.w }));
@@ -1348,6 +1464,7 @@ function hostTick(dt) {
     if (H.flowT <= 0 || !H.flow) {
       H.flowT = 0.25;
       H.flow = computeFlow(al.map(p => cellOf(p.x, p.z).map((v, i) => clamp(v, 0, i ? MH - 1 : MW - 1))));
+      recomputeSpawns();
     }
     const flow = H.flow;
     for (const z of H.zombies) {
@@ -1363,6 +1480,10 @@ function hostTick(dt) {
       if (!best) continue;
       const [c, r] = cellOf(z.x, z.z);
       const dc = flow[r * MW + c];
+      const li = LINK[r * MW + c]; // on a staircase and the way to you is up/down it: take the stairs
+      if (li !== undefined && dc > 0 && flow[li] >= 0 && flow[li] < dc) {
+        z.x += (li % MW - c) * CELL; z.z += (((li / MW) | 0) - r) * CELL; continue;
+      }
       let tx = best.x, tz = best.z;
       if (dc > 1 && bd > CELL * 1.1) {
         let bv = dc;
@@ -1436,7 +1557,7 @@ function hostTick(dt) {
       bd: [H.built.shield ? 1 : 0, H.built.cannon ? (H.cannonTaken ? 2 : 1) : 0],
       bh: H.zombies.filter(z => z.k === 'boss').reduce((a, z) => Math.max(a, +(z.hp / z.max).toFixed(3)), 0),
       zs: H.zombies.map(z => [z.id, +z.x.toFixed(2), +z.z.toFixed(2), +z.yaw.toFixed(2), z.rise > 0 ? 1 : 0, z.run, z.attacking ? 1 : 0, z.k === 'dog' ? 1 : z.k === 'boss' ? 2 : 0]),
-      md: H.mode, sm: H.startMode,
+      md: H.mode, sm: H.startMode, sc: H.scene, nu: H.nachtOpen ? 1 : 0, tf: H.transfer ? [H.transfer.to, Math.ceil(H.transfer.t)] : null,
       ps: players.map(p => ({ id: p.id, n: p.name, c: p.col, ch: p.ch, sp: p.sp ? 1 : 0, x: +p.x.toFixed(2), y: +p.y.toFixed(2), z: +p.z.toFixed(2), yaw: +p.yaw.toFixed(3), pi: +p.pitch.toFixed(3),
         hp: Math.round(p.hp), mh: maxHp(p), pts: p.pts, dn: p.down ? 1 : 0, dd: p.dead ? 1 : 0, bl: +p.bleed.toFixed(1), rv: +(p.rev / 3).toFixed(2), w: p.w, f: p.f, pk: p.perks.join(''), sh: Math.round(p.shield), sn: p.shieldN })),
       dr: H.drops.map(d => [d.id, d.k, +d.x.toFixed(2), +d.z.toFixed(2), +d.t.toFixed(1)]),
@@ -1530,7 +1651,7 @@ function canvasTex(w, h, draw) {
 const world = new THREE.Group(); scene.add(world);    // raycastable static geometry
 const zGroup = new THREE.Group(); scene.add(zGroup);  // live zombies (raycastable)
 const fxGroup = new THREE.Group(); scene.add(fxGroup);// never raycast
-const doorMeshes = {}, roomLights = [], powerFx = [], spinners = [], boxSpots = [], trapPlates = [], partMeshes = [];
+const doorMeshes = {}, roomLights = [], powerFx = [], spinners = [], boxSpots = [], trapPlates = [], partMeshes = [], portalSheets = [];
 let benchShield = null, benchCannon = null;
 let screenCtx = null, screenTex = null, padMat = null, beam = null, lever = null, boxGlow, boxLabel, boxLight;
 const mtx = new THREE.Matrix4();
@@ -1607,16 +1728,43 @@ function buildWorld() {
 
   // doors: boarded debris (the power door is a steel shutter)
   const boardMat = mat('board', [2, 2]), steelMat = mat('metal', [2, 2]);
-  for (const id in doorCells) {
-    const [c, r] = doorCells[id], [x, z] = cellCenter(c, r);
-    const alongX = solidCell(c - 1, r) && solidCell(c + 1, r);
-    const top = roomHeightNear(c, r), dh = 2.9;
-    const door = new THREE.Mesh(new THREE.BoxGeometry(alongX ? CELL : CELL * 0.4, dh, alongX ? CELL * 0.4 : CELL), id === '0' || id === '6' ? steelMat : boardMat);
-    door.position.set(x, dh / 2, z); world.add(door);
-    const lintel = new THREE.Mesh(new THREE.BoxGeometry(CELL, top - dh, CELL), mat('stone', [2, 1]));
-    lintel.position.set(x, dh + (top - dh) / 2, z); world.add(lintel);
-    const label = textSprite(id === '0' ? 'Needs power' : '$' + DOORS[id], id === '0' ? '#7cf' : '#fd6', 60); label.position.set(x, dh + 0.1, z); label.scale.set(1.6, .4, 1); fxGroup.add(label);
-    doorMeshes[id] = [door, label];
+  for (const id in doorCellsAll) {
+    const cells = doorCellsAll[id], meshes = [], stair = STAIRS[id];
+    for (const [c, r] of cells) {
+      const [x, z] = cellCenter(c, r), top = roomHeightNear(c, r);
+      if (stair) { // a heap of broken planks over the staircase
+        for (let i = 0; i < 3; i++) { const b = box3(CELL * .9, .22, .35, boardMat); b.position.set(x + J(.6), .3 + i * .3, z + J(1.6)); b.rotation.y = J(.9); world.add(b); meshes.push(b); }
+        continue;
+      }
+      const single = cells.length === 1, alongX = single && solidCell(c - 1, r) && solidCell(c + 1, r), dh = 2.9;
+      const door = new THREE.Mesh(new THREE.BoxGeometry(!single || alongX ? CELL : CELL * 0.4, dh, !single || !alongX ? CELL : CELL * 0.4), id === '0' || id === '6' ? steelMat : boardMat);
+      door.position.set(x, dh / 2, z); world.add(door); meshes.push(door);
+      const lintel = new THREE.Mesh(new THREE.BoxGeometry(CELL, top - dh, CELL), mat('stone', [2, 1]));
+      lintel.position.set(x, dh + (top - dh) / 2, z); world.add(lintel);
+    }
+    const lc = cells.reduce((a, b) => [a[0] + b[0] / cells.length, a[1] + b[1] / cells.length], [0, 0]);
+    const [lx, lz] = cellCenter(lc[0], lc[1]);
+    const label = textSprite(id === '0' ? 'Needs power' : (stair ? 'Stairs ' : '') + '$' + DOORS[id], id === '0' ? '#7cf' : '#fd6', 60);
+    label.position.set(lx, stair ? 1.8 : 3, lz); label.scale.set(1.6, .4, 1); fxGroup.add(label);
+    doorMeshes[id] = [...meshes, label];
+  }
+  // Nacht staircases: blocky steps going up on the ground floor, a stairwell going down upstairs
+  for (const id in STAIRS) for (const [c, r] of doorCellsAll[id]) {
+    const [x, z] = cellCenter(c, r), cells = doorCellsAll[id].filter(([, rr]) => (rr < NACHT.uy) === (r < NACHT.uy));
+    const minC = Math.min(...cells.map(q => q[0])), step = c - minC + 1;
+    if (r < NACHT.uy) { const st = box3(CELL, step * .35, CELL, mat('plank', [2, step * .4])); st.position.set(x, step * .175, z); world.add(st); }
+    else { const pit = new THREE.Mesh(new THREE.PlaneGeometry(CELL, CELL), new THREE.MeshBasicMaterial({ color: 0x050405 })); pit.rotation.x = -Math.PI / 2; pit.position.set(x, .02, z); fxGroup.add(pit);
+      const rail = box3(.12, 1, CELL, mat('dark', [1, 1])); rail.position.set(x + (step === 1 ? -CELL / 2 + .1 : CELL / 2 - .1), .5, z); if (step === 1 || step === cells.length / 2 || step === Math.max(...cells.map(q => q[0])) - minC + 1) world.add(rail); }
+  }
+  // portals: the Nacht Door in Kino's projector room, and the way back in Nacht
+  for (const [cell, text, col] of [[nachtDoorCell, 'Nacht Door', 0x9a4dff], [returnCell, 'Return to Kino', 0x4dd2ff]]) {
+    const [x, z] = cellCenter(...cell), [fx, fz] = facing(...cell), g = new THREE.Group(), ob = mat('obsidian', [1, 2]);
+    for (const sx of [-1, 1]) { const post = box3(.5, 3, .5, ob); post.position.set(sx * 1.05, 1.5, 0); g.add(post); }
+    const top = box3(2.6, .5, .5, ob); top.position.y = 3.15; g.add(top);
+    const sheet = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 2.7), new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: .6, side: THREE.DoubleSide, depthWrite: false }));
+    sheet.position.y = 1.5; g.add(sheet); portalSheets.push(sheet);
+    g.position.set(x, 0, z); g.rotation.y = Math.atan2(fx, fz); world.add(g);
+    const lab = textSprite(text, '#' + new THREE.Color(col).getHexString(), 54); lab.position.set(x, 3.9, z); lab.scale.set(2, .5, 1); fxGroup.add(lab);
   }
 
   // wall-buy chalk outlines
@@ -1664,6 +1812,8 @@ function buildWorld() {
   L(34.5, 7.5, 3, 0xffccaa, 1.0, 18); L(34.5, 16, 4, 0xffd090, 1.0, 22); L(34.5, 23.5, 3, 0xffbb77, .9, 16);
   L(45, 6.5, 6, 0x8899ff, 1.0, 28); L(45, 20, 4.5, 0xffcc88, 1.0, 26); L(34.5, 33.5, 4, 0xffc080, 1.1, 24);
   L(14, 37.5, 4.5, 0xffe0b0, 1.1, 22); L(25, 37.5, 4.5, 0xffe0b0, 1.1, 22); L(4.5, 34.5, 4.5, 0xff7733, 1.2, 24);
+  // Nacht: a few weak bulbs
+  L(...NG(6, 5), 3, 0xffcc88, .9, 18); L(...NG(6, 13), 3, 0xffb070, .9, 20); L(...NG(18, 14), 3, 0xffcc88, 1.0, 24); L(...NU(6, 12), 3, 0xffb070, .9, 22); L(...NU(18, 14), 3, 0xffcc88, .9, 24);
   const papL = new THREE.PointLight(0xb060ff, 1.4, 24, 1.6); const [ux, uz] = cellCenter(...upgCell); papL.position.set(ux, 3, uz); scene.add(papL);
   boxLight = new THREE.PointLight(0x55ffff, 1.0, 9, 2); scene.add(boxLight);
 }
@@ -1729,6 +1879,8 @@ function buildMachines() {
   boxGlow = new THREE.Mesh(new THREE.CylinderGeometry(.5, .9, 9, 4, 1, true), new THREE.MeshBasicMaterial({ color: 0x66ffff, transparent: true, opacity: .09, side: THREE.DoubleSide, depthWrite: false }));
   fxGroup.add(boxGlow);
   boxLabel = textSprite('Mystery Box $' + BOX_COST, '#7ff', 44); boxLabel.scale.set(2.2, .55, 1); fxGroup.add(boxLabel);
+  { const s = boxSpots[NACHT_BOX], g = boxGlow.clone(), l = textSprite('Mystery Box $' + BOX_COST, '#7ff', 44); // Nacht's box never moves
+    g.position.set(s.x, s.y + 4.5, s.z); l.position.set(s.x, s.y + 1.5, s.z); l.scale.set(2.2, .55, 1); fxGroup.add(g, l); }
 
   for (const id in perkCells) {
     const pk = PERKS[id], [c, r] = perkCells[id], [x, z] = cellCenter(c, r), [fx, fz] = facing(c, r);
@@ -1978,6 +2130,38 @@ function decorate() {
     for (let i = 0; i < 7; i++) { const s = rand(.3, .6); const coal = box3(s, s, s, new THREE.MeshLambertMaterial({ color: 0x141210 })); coal.position.set(P(7, 30)[0] + J(1.6), s / 2, P(7, 30)[1] + J(1.6)); world.add(coal); }
     blood(4, 39); rubble(2, 36, 0, 0);
   }
+  // --- meme-coin slop all over Kino: original pixel posters, billboards and graffiti
+  {
+    const meme = (c, r, f, kind, w = 1.6, h = 2.1, y = 2.2) => {
+      const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ map: memeTex(kind, w / h), transparent: true }));
+      const fp = wallFace({ c, r, f }); m.position.set(fp.x + f[0] * .035, y, fp.z + f[1] * .035); m.rotation.y = Math.atan2(f[0], f[1]); world.add(m);
+    };
+    meme(12, 32, [0, -1], 'frog'); meme(27, 32, [0, -1], 'shiba');                      // lobby
+    meme(17, 20, [0, 1], 'trump'); meme(22, 20, [0, 1], 'elon');                         // lobby, over the theater shutter
+    meme(51, 3, [-1, 0], 'moon', 6, 3.4, 3.4);                                           // rooftop billboard
+    meme(39, 29, [-1, 0], 'chart'); meme(35, 41, [0, -1], 'coin', 1.8, 1.8, 2.0);       // box office
+    meme(1, 14, [1, 0], 'degen', 3, 1.2, 2.4); meme(7, 15, [-1, 0], 'wagmi', 3, 1.2, 3.2); // alley graffiti
+    meme(39, 20, [-1, 0], 'dip');                                                        // foyer
+    meme(20, 33, [0, 1], 'rug', 2.2, 1.6, 2.4);                                          // workshop
+    meme(0, 39, [1, 0], 'hodl', 3, 1.2, 2.6);                                            // boiler room
+  }
+  // --- Nacht der Untoten: bunker clutter, sandbags, the HELP sign
+  {
+    const helpTex = canvasTex(256, 96, g => { g.fillStyle = 'rgba(120,0,0,.9)'; g.font = 'bold 76px Creepster, serif'; g.textAlign = 'center'; g.fillText('HELP', 128, 78); });
+    const help = new THREE.Mesh(new THREE.PlaneGeometry(4, 1.5), new THREE.MeshBasicMaterial({ map: helpTex, transparent: true }));
+    const hf = wallFace({ c: NG(6, 8)[0], r: NG(6, 8)[1], f: [0, 1] }); help.position.set(hf.x, 2.2, hf.z + .03); world.add(help);
+    const sand = new THREE.MeshLambertMaterial({ map: pixTex(() => hsl(40, 25, 42 + J(10)), null, 8) });
+    for (const [c, r, ox, oz] of [[...NG(13, 13), 0, 0], [...NG(14, 13), 0, 0], [...NG(13, 16), 0, 0], [...NG(20, 18), 0, 0]]) for (let i = 0; i < 2; i++) { const b = box3(1.4, .45, .7, sand); b.position.set(P(c, r)[0] + ox, .23 + i * .45, P(c, r)[1] + oz); b.rotation.y = .3 * i; world.add(b); }
+    const [tx, tz] = P(...NG(9, 6)); const table = box3(2, .1, 1, mat('plank', [1, 1])); table.position.set(tx, .9, tz); world.add(table);
+    for (const [lx, lz] of [[-.9, -.4], [.9, -.4], [-.9, .4], [.9, .4]]) { const leg = box3(.1, .9, .1, mat('dark', [1, 1])); leg.position.set(tx + lx, .45, tz + lz); world.add(leg); }
+    const radio = box3(.5, .35, .3, mat('metal', [1, 1])); radio.position.set(tx + .4, 1.12, tz); world.add(radio);
+    crate(...NG(23, 20), .6, .6); crate(...NG(23, 20), .6, .6, 1.1, 1); barrel(...NG(2, 18), -.6, .6); crate(...NG(10, 9), .6, -.6);
+    blood(...NG(16, 12)); blood(...NG(7, 14)); blood(...NG(20, 16)); rubble(...NG(15, 19), 0, .4);
+    // upstairs
+    for (const [c, r] of [NU(3, 4), NU(22, 19)]) { const cot = box3(1.2, .4, 2.4, new THREE.MeshLambertMaterial({ color: 0x4a5a3a })); const [x, z] = P(c, r); cot.position.set(x, .2, z); world.add(cot); }
+    crate(...NU(10, 4), .6, -.6); crate(...NU(23, 9), .6, -.6); barrel(...NU(2, 17), -.6, 0); barrel(...NU(13, 20), 0, .6);
+    blood(...NU(6, 10)); blood(...NU(17, 15)); rubble(...NU(15, 11), 0, 0); rubble(...NU(8, 16), 0, 0);
+  }
   // --- Projector/upgrade room: film reels stacked around
   { for (const [c, r] of [[14, 1], [25, 1], [14, 3], [25, 3]]) { const [x, z] = P(c, r); for (let i = 0; i < 3; i++) { const reel = new THREE.Mesh(new THREE.CylinderGeometry(.5, .5, .1, 8), mat('metal', [1, 1])); reel.position.set(x, .05 + i * .12, z); world.add(reel); } } }
 }
@@ -2000,6 +2184,60 @@ function makePartModel(name) {
   else { const r = new THREE.Mesh(new THREE.CylinderGeometry(.3, .3, .08, 10), mat('metal', [1, 1])); r.rotation.x = Math.PI / 2; inner.add(r); }
   const lab = textSprite(name, '#fd6', 46); lab.position.y = .75; lab.scale.set(1.5, .38, 1); g.add(lab);
   return g;
+}
+// pixel-art meme posters (all original: generic frog, shiba, rockets, charts, our own $SHIFT coin)
+function memeTex(kind, aspect) {
+  const H = 64, W = Math.round(H * aspect), cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+  const g = cv.getContext('2d'), px = (x, y, w, h, col) => { g.fillStyle = col; g.fillRect(x, y, w, h); };
+  const text = (t, y, col, size = 11, x = W / 2) => { g.font = `${size}px VT323, monospace`; g.textAlign = 'center'; g.fillStyle = '#000'; g.fillText(t, x + 1, y + 1); g.fillStyle = col; g.fillText(t, x, y); };
+  const frame = (bg, edge) => { px(0, 0, W, H, edge); px(2, 2, W - 4, H - 4, bg); };
+  const graffiti = (t, col) => { g.font = `bold ${Math.floor(H * .62)}px Creepster, VT323, monospace`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = 'rgba(0,0,0,.4)'; g.fillText(t, W / 2 + 2, H / 2 + 3); g.fillStyle = col; g.fillText(t, W / 2, H / 2); };
+  if (kind === 'frog') {
+    frame('#1a2f1a', '#d9b54a');
+    px(10, 18, 28, 22, '#5aa838'); px(8, 22, 32, 16, '#5aa838'); px(12, 14, 9, 8, '#5aa838'); px(27, 14, 9, 8, '#5aa838');
+    px(13, 16, 7, 5, '#fff'); px(28, 16, 7, 5, '#fff'); px(16, 18, 3, 3, '#111'); px(31, 18, 3, 3, '#111');
+    px(13, 30, 22, 3, '#a33'); px(14, 33, 20, 2, '#7a1f1f'); px(10, 40, 28, 8, '#3a66c4');
+    text('FROGZ', 56, '#9ef07a', 12);
+  } else if (kind === 'shiba') {
+    frame('#2a1a10', '#d9b54a');
+    px(11, 16, 26, 22, '#e08a3a'); px(11, 10, 6, 8, '#e08a3a'); px(31, 10, 6, 8, '#e08a3a'); px(13, 12, 3, 5, '#f4c9a0'); px(32, 12, 3, 5, '#f4c9a0');
+    px(16, 26, 16, 12, '#f6ead8'); px(16, 22, 3, 3, '#111'); px(29, 22, 3, 3, '#111'); px(22, 28, 4, 3, '#111'); px(20, 33, 8, 2, '#c66');
+    text('MUCH WOW', 50, '#ffd36a', 10); text('$DOGWIF', 59, '#fff', 10);
+  } else if (kind === 'trump' || kind === 'elon') {
+    frame(kind === 'trump' ? '#10162a' : '#141414', '#d9b54a');
+    const f = facePixels(kind === 'trump' ? 'trump' : 'elon');
+    for (let y = 0; y < 8; y++) for (let x = 0; x < 8; x++) px(12 + x * 3, 8 + y * 3, 3, 3, f[y][x]);
+    px(12, 17, 24, 2, 'rgba(0,0,0,0)'); px(18, 17, 3, 2, '#ff2020'); px(27, 17, 3, 2, '#ff2020');      // laser eyes
+    g.strokeStyle = 'rgba(255,40,40,.85)'; g.lineWidth = 2; g.beginPath(); g.moveTo(19, 18); g.lineTo(0, 40); g.moveTo(28, 18); g.lineTo(W, 40); g.stroke();
+    text(kind === 'trump' ? 'BUY THE DIP' : 'TO THE MARS', 44, '#ffd36a', 11); text('NOT FINANCIAL', 52, '#ccc', 8); text('ADVICE', 59, '#ccc', 8);
+  } else if (kind === 'moon') {
+    frame('#0a0a22', '#ff4fa8');
+    for (let i = 0; i < 30; i++) px((i * 37) % W, (i * 23) % (H - 10), 1, 1, '#fff');
+    px(W - 30, 8, 18, 18, '#e8e4c8'); px(W - 24, 12, 4, 4, '#c8c4a8'); px(W - 18, 18, 3, 3, '#c8c4a8');
+    const rx = W * .38; px(rx, 22, 8, 22, '#ddd'); px(rx + 2, 16, 4, 6, '#e33'); px(rx - 4, 38, 4, 8, '#e33'); px(rx + 8, 38, 4, 8, '#e33'); px(rx + 2, 44, 4, 8, '#fa5'); px(rx + 3, 26, 2, 3, '#4af');
+    text('TO THE MOON', 58, '#ff7ac8', 16, W * .38);
+  } else if (kind === 'chart') {
+    frame('#0d1410', '#2a3a2a');
+    for (let i = 0; i < 9; i++) { const up = i !== 3 && i !== 6, h = 6 + i * 4 + (up ? 0 : -6), x = 6 + i * 4; px(x + 1, H - 18 - h - 3, 1, h + 6, '#888'); px(x, H - 18 - h, 3, h, up ? '#4ade80' : '#f05252'); }
+    text('1000x', 14, '#4ade80', 14); text('NO RUG', H - 5, '#ccc', 9);
+  } else if (kind === 'coin') {
+    frame('#120f06', '#d9b54a');
+    g.fillStyle = '#b8860b'; g.beginPath(); g.arc(W / 2, H / 2 - 4, 22, 0, 7); g.fill();
+    g.fillStyle = '#f5c542'; g.beginPath(); g.arc(W / 2, H / 2 - 4, 18, 0, 7); g.fill();
+    text('$', H / 2 + 4, '#8a5a00', 30); text('$SHIFT', H - 6, '#ffd36a', 12);
+  } else if (kind === 'dip') {
+    frame('#1c0a0a', '#f05252');
+    for (let i = 0; i < 8; i++) { const x = 6 + i * 4, h = 24 - i * 3; px(x, H - 22 - h, 3, h, i < 6 ? '#f05252' : '#4ade80'); }
+    text('THE DIP', 14, '#ffd36a', 13); text('BUY IT', H - 6, '#4ade80', 11);
+  } else if (kind === 'rug') {
+    frame('#d9b54a', '#111');
+    for (let i = -H; i < W; i += 10) { g.fillStyle = '#111'; g.beginPath(); g.moveTo(i, H); g.lineTo(i + 5, H); g.lineTo(i + 5 + H, 0); g.lineTo(i + H, 0); g.fill(); }
+    px(6, 14, W - 12, 34, '#d9b54a'); text('⚠ RUG PULL', 30, '#111', 14); text('ZONE', 44, '#111', 12);
+  } else {
+    const words = { degen: ['DEGEN', '#4ade80'], wagmi: ['WAGMI', '#ff4fa8'], hodl: ['HODL', '#f5c542'] }[kind];
+    graffiti(...words);
+  }
+  const t = new THREE.CanvasTexture(cv); t.magFilter = THREE.NearestFilter; return t;
 }
 function drawScreen(t, on) {
   const g = screenCtx, w = 160, h = 90;
@@ -2024,7 +2262,7 @@ function applyPower() {
 }
 function placeBox(i) {
   boxShown = i;
-  boxSpots.forEach((s, k) => s.mesh.material = k === i ? s.liveMat : s.idleMat);
+  boxSpots.forEach((s, k) => s.mesh.material = k === i || k === NACHT_BOX ? s.liveMat : s.idleMat);
   const s = boxSpots[i];
   boxGlow.position.set(s.x, s.y + 4.5, s.z); boxLabel.position.set(s.x, s.y + 1.5, s.z); boxLight.position.set(s.x, s.y + 1.8, s.z);
 }
@@ -2490,7 +2728,7 @@ function onEvent(m) {
       if (m.k === 'maxammo') for (const w of me.inv) w.res = defOf(w).res;
       break;
     }
-    case 'box': boxAnim = { pid: m.pid, w: m.w, t: 0, dur: m.dur, mesh: null }; sTone([392, 523, 659, 784, 659, 523], .3, 'sine', .12, .45); break;
+    case 'box': boxAnim = { pid: m.pid, w: m.w, t: 0, dur: m.dur, mesh: null, loc: m.loc }; sTone([392, 523, 659, 784, 659, 523], .3, 'sine', .12, .45); break;
     case 'boxdone': if (boxAnim && boxAnim.mesh) fxGroup.remove(boxAnim.mesh); boxAnim = null; break;
     case 'boxmove': announce('The box is moving', 2.5, '#7ff'); feed('The mystery box moved to the ' + m.room, '#7ff'); sTone([300, 250, 200, 150], .5, 'sine', .15, .25); placeBox(m.loc); break;
     case 'power': if (!powerShown) applyPower(); announce('Power on', 3, '#fd6'); feed(m.name + ' turned on the power — the lobby shutter is open', '#fd6'); sPower(); break;
@@ -2499,7 +2737,8 @@ function onEvent(m) {
     case 'tpfx': sWarp(); { const [x, z] = cellCenter(...padCell); burst(new THREE.Vector3(x, 1.5, z), pMatTp, 30, 4, .15, 1); } break;
     case 'tp':
       me.x = m.x; me.z = m.z; me.y = 0; me.vx = me.vz = 0; me.yaw = m.yaw; tpFlash(); sWarp();
-      feed(m.to === 'pap' ? 'You have 30 seconds — use the Re-Cut Machine to upgrade your gun' : 'Back at the lobby mainframe', '#c8f');
+      feed({ pap: 'You have 30 seconds — use the Re-Cut Machine to upgrade your gun', back: 'Back at the lobby mainframe',
+        nacht: 'Nacht der Untoten. The way back to Kino is the portal in this entrance hall.', kino: 'Back in the projector room — the teleporter drops you in the lobby in 20s' }[m.to] || '', '#c8f');
       break;
     case 'upgraded': {
       const w = me.inv[me.cur];
@@ -2511,11 +2750,13 @@ function onEvent(m) {
       break;
     }
     case 'modfx': modFx(m); break;
+    case 'transfer': announce(m.to === 'nacht' ? 'To Nacht der Untoten' : 'Back to Kino', 3, '#c8f'); feed(`${m.name} opened the way — the whole team teleports in ${m.t}s`, '#c8f'); sWarp(); break;
+    case 'scene': if (m.scene === 'nacht') { announce('Nacht der Untoten', 3.5, '#c8f'); sRound(); } break;
     case 'trap': feed(m.name + ' set off the ' + TRAPS[m.id].name, TRAPS[m.id].kind === 'fire' ? '#fa5' : '#7cf'); break;
     case 'over': showGameOver(m); break;
     case 'ranked': showRanked(m); break;
     case 'reset':
-      gameOver = false; $('over').classList.add('hidden');
+      gameOver = false; $('over').classList.add('hidden'); $('hud').classList.remove('hidden');
       if (IS_TOUCH) { document.body.classList.add('playing'); $('touchUI').classList.remove('hidden'); }
       doorsOpen = {}; for (const id in doorMeshes) doorMeshes[id].forEach(o => o.visible = true);
       me.x = m.x; me.z = m.z; me.y = 0; me.down = me.dead = false; me.last = null; me.inv = [{ id: 'pistol', mag: 8, res: 80 }]; me.cur = 0; equip();
@@ -2731,8 +2972,19 @@ function findInteract() {
   if (me.down || me.dead || !state) return null;
   for (const p of state.ps) if (p.dn && p.id !== net.myId && Math.hypot(p.x - me.x, p.z - me.z) < 2.6)
     return { kind: 'revive', pid: p.id, label: `Hold <b>F</b> to revive ${esc(p.n)}`, rv: p.rv };
-  for (const id in doorCells) if (!doorsOpen[id] && near(doorCells[id], 3.0))
-    return id === '0' ? { kind: 'none', label: 'The shutter opens when the power is on (power is on the stage)' } : { kind: 'door', id, label: `Press <b>F</b> to clear debris <b>[$${DOORS[id]}]</b>` };
+  if (nachtDoorCell && near(nachtDoorCell, 3.2)) {
+    if (state.tf) return { kind: 'none', label: `The team leaves for ${state.tf[0] === 'nacht' ? 'Nacht der Untoten' : 'Kino'} in ${state.tf[1]}s` };
+    if (!state.pw) return { kind: 'none', label: 'The Nacht Door needs power' };
+    if (!state.nu) return state.r < NACHT_ROUND ? { kind: 'none', label: `The Nacht Door opens from round ${NACHT_ROUND} (it's round ${state.r})` }
+      : { kind: 'nacht', label: `Press <b>F</b> to open the Nacht Door <b>[$${NACHT_COST}]</b> — the whole team goes` };
+    return { kind: 'nacht', label: 'Press <b>F</b> to enter Nacht der Untoten (the whole team goes)' };
+  }
+  if (returnCell && near(returnCell, 3.2)) {
+    if (state.tf) return { kind: 'none', label: `The team leaves for ${state.tf[0] === 'nacht' ? 'Nacht der Untoten' : 'Kino'} in ${state.tf[1]}s` };
+    return { kind: 'return', label: 'Press <b>F</b> to return to Kino (the whole team goes)' };
+  }
+  for (const id in doorCellsAll) if (!doorsOpen[id] && doorCellsAll[id].some(cell => near(cell, 3.0)))
+    return STAIRS[id] ? { kind: 'door', id, label: `Press <b>F</b> to clear the ${STAIRS[id]} <b>[$${DOORS[id]}]</b>` } : id === '0' ? { kind: 'none', label: 'The shutter opens when the power is on (power is on the stage)' } : { kind: 'door', id, label: `Press <b>F</b> to clear debris <b>[$${DOORS[id]}]</b>` };
   for (const wb of WALL_GUNS) { const fp = wallFace(wb); if (Math.hypot(fp.x - me.x, fp.z - me.z) < 2.3) {
     const def = WEAPONS[wb.w], has = me.inv.some(w => w.id === wb.w);
     return { kind: 'wall', id: wb.id, has, label: has ? `Press <b>F</b> for ${def.name} ammo <b>[$${Math.ceil(def.cost / 2)}]</b>` : `Press <b>F</b> to buy ${def.name} <b>[$${def.cost}]</b>` };
@@ -2781,9 +3033,9 @@ function findInteract() {
     if (state.bd[0] && me.shield <= 0) return { kind: 'shield', label: `Press <b>F</b> to take a <b>Zombie Shield</b> <b>[${mine.sn ? '$' + SHIELD_REPLACE : 'free'}]</b>` };
     return { kind: 'none', label: `Workbench — Shield parts ${have('shield')}/3 · Cannon parts ${have('cannon')}/3` };
   }
-  if (near(boxCells[state.bx], 3.0)) {
-    if (state.bm) return { kind: 'none', label: 'The box is moving…' };
-    return boxAnim ? { kind: 'none', label: 'The box is spinning…' } : { kind: 'box', label: `Press <b>F</b> for a random weapon <b>[$${state.fs ? 10 : BOX_COST}]</b>` };
+  for (const loc of [state.bx, NACHT_BOX]) if (near(boxCells[loc], 3.0)) {
+    if (loc === state.bx && state.bm) return { kind: 'none', label: 'The box is moving…' };
+    return boxAnim ? { kind: 'none', label: 'The box is spinning…' } : { kind: 'box', loc, label: `Press <b>F</b> for a random weapon <b>[$${state.fs ? 10 : BOX_COST}]</b>` };
   }
   return null;
 }
@@ -2794,7 +3046,8 @@ function interact() {
   const k = it.kind;
   if (k === 'door' || k === 'perk' || k === 'trap') sendToHost({ t: 'buy', k, id: it.id });
   else if (k === 'wall') sendToHost({ t: 'buy', k, id: it.id, has: it.has });
-  else if (k === 'box') sendToHost({ t: 'buy', k, cur: curW().id });
+  else if (k === 'box') sendToHost({ t: 'buy', k, cur: curW().id, loc: it.loc });
+  else if (k === 'nacht' || k === 'return') sendToHost({ t: 'buy', k });
   else if (k === 'power' || k === 'link' || k === 'tp') sendToHost({ t: 'buy', k });
   else if (k === 'upgrade') sendToHost({ t: 'buy', k, cur: curW().id, tier: it.tier });
   else if (k === 'part') sendToHost({ t: 'buy', k, id: it.id });
@@ -2806,7 +3059,8 @@ function interact() {
 const mini = $('mini'), mctx = mini.getContext('2d');
 const MINI_R = 26; // metres shown from center to edge
 const ROOM_TINT = { pap: '#2a1838', stage: '#4a3624', theater: '#3a1a1e', lobby: '#3c2024', back: '#33302c', alley: '#2c2a28', lower: '#302e2c', dress: '#3c3024', foyer: '#2a3230', upper: '#3a3024',
-  roof: '#2a2a32', dock: '#322e2a', boxoff: '#3a2228', shop: '#3a3026', boiler: '#3a2620' };
+  roof: '#2a2a32', dock: '#322e2a', boxoff: '#3a2228', shop: '#3a3026', boiler: '#3a2620',
+  n_hall: '#33302a', n_help: '#3a2622', n_main: '#30302a', n_upw: '#2c2a2e', n_upe: '#2e2c2a' };
 let miniT = 0;
 function drawMinimap() {
   const W = mini.width, R = W / 2, sc = R / MINI_R;
@@ -2829,7 +3083,8 @@ function drawMinimap() {
     else if (DOORS[k] !== undefined) col = doorsOpen[k] ? '#4a4038' : (k === '0' ? '#3a6a8a' : '#a8742e');
     else if (k === '=') col = '#6a1c22';
     else if (PERKS[k]) col = PERKS[k].col;
-    else if (k === 'M' || k === 'Z' || k === 'U') col = '#e8c45a';
+    else if (k === 'M' || k === 'Z' || k === 'U' || k === 'W') col = '#e8c45a';
+    else if (k === 'N' || k === 'R') col = '#9a4dff';
     else if (k === 'X') col = '#4a3a28';
     else { const Rm = roomAt(c, r); col = Rm ? ROOM_TINT[Rm.id] : '#2a2624'; if (HGT[r][c] > 0) col = HGT[r][c] === 1 ? '#5a4632' : '#4a3a2a'; }
     const ti = trapAt[r * MW + c];
@@ -2872,6 +3127,7 @@ function drawMinimap() {
     if (!state.pw) label(...cellCenter(...powerCell), 'PWR', '#fd6');
     label(...cellCenter(...mainCell), 'M', '#000');
     label(...cellCenter(...benchCell), 'W', '#000');
+    label(...cellCenter(...nachtDoorCell), 'N', '#c8f'); label(...cellCenter(...returnCell), 'K', '#7df');
   }
   // you
   g.fillStyle = '#fff'; g.strokeStyle = '#000'; g.lineWidth = 1.5;
@@ -2949,6 +3205,7 @@ function updateHUD() {
   let pw = '';
   if (state.insta) pw += `<span style="color:#f55">INSTA-KILL ${state.insta}</span>`;
   if (state.fs) pw += `<span style="color:#f8a">FIRE SALE ${state.fs}</span>`;
+  if (state.tf) pw += `<span style="color:#c8f">TELEPORTING TO ${state.tf[0] === 'nacht' ? 'NACHT' : 'KINO'} IN ${state.tf[1]}</span>`;
   // buildables, shield, boss
   const parts = b => PART_LIST.map((pt, i) => pt.b === b ? `<i class="${state.pp[i] === -1 ? 'on' : ''}"></i>` : '').join('');
   const bkey = state.pp.join() + state.bd.join();
@@ -3038,11 +3295,12 @@ function showGameOver(m) {
   gameOver = true;
   document.body.classList.remove('playing'); $('touchUI').classList.add('hidden');
   if (document.pointerLockElement) document.exitPointerLock();
-  $('over').classList.remove('hidden'); $('pause').classList.add('hidden');
+  $('over').classList.remove('hidden'); $('pause').classList.add('hidden'); $('hud').classList.add('hidden'); // nothing from the HUD shows through
   $('overSub').textContent = `Your team survived ${m.round} round${m.round === 1 ? '' : 's'}`;
   $('overStats').innerHTML = '<tr><th>Survivor</th><th>Kills</th><th>Headshots</th><th>Revives</th><th>Downs</th><th>Points</th></tr>' +
     m.stats.map(s => `<tr${s[7] ? ' style="opacity:.6"' : ''}><td style="color:${s[1]}">${esc(s[0])}${s[7] ? ` <small style="color:var(--dim)">(left in round ${s[7]})</small>` : ''}</td><td>${s[2]}</td><td>${s[3]}</td><td>${s[4]}</td><td>${s[5]}</td><td>${s[6]}</td></tr>`).join('');
   $('againBtn').classList.toggle('hidden', !net.isHost);
+  $('menuBtn').textContent = net.isHost && m.stats.length > 1 ? 'Main menu (closes the room)' : 'Main menu';
   $('overWait').classList.toggle('hidden', net.isHost);
   sTone([110, 104, 98, 82], 1.6, 'sawtooth', .12, .4);
 }
@@ -3123,6 +3381,11 @@ $('joinBtn').onclick = () => { initAudio(); readName(); joinGame($('joinCode').v
 $('joinCode').addEventListener('keydown', e => { if (e.key === 'Enter') $('joinBtn').click(); });
 $('startBtn').onclick = () => { if ($('startBtn').disabled) return; sendToHost({ t: 'start' }); requestLock(); };
 $('againBtn').onclick = () => sendToHost({ t: 'restart' });
+// back to the landing page (keeps your name and settings; leaving as host ends the room for everyone)
+const toMenu = () => { location.href = location.pathname; };
+$('menuBtn').onclick = toMenu;
+$('leaveBtn').onclick = e => { e.stopPropagation(); if (!net.isHost || Object.keys(host.players).length < 2 || $('leaveBtn').dataset.sure) return toMenu();
+  $('leaveBtn').dataset.sure = 1; $('leaveBtn').textContent = 'You are the host — click again to end the game for everyone'; };
 $('copyBtn').onclick = () => {
   const el = $('shareLink'), done = () => { $('copyBtn').textContent = 'Copied'; setTimeout(() => $('copyBtn').textContent = 'Copy link', 1500); };
   const fallback = () => { el.focus(); el.select(); try { document.execCommand('copy'); done(); } catch (e) {} };
@@ -3136,6 +3399,11 @@ if (urlCode && /^[A-Za-z0-9]{5}$/.test(urlCode)) {
   $('invite').classList.remove('hidden');
   $('joinBtn').classList.remove('ghost'); $('hostBtn').classList.add('ghost');
   $('name').addEventListener('keydown', e => { if (e.key === 'Enter') $('joinBtn').click(); });
+}
+{ // fictional coins, all slop
+  const coins = [['$SHIFT', 4200], ['$BRAINZ', 1337], ['$RUGGED', -99], ['$FROGZ', 690], ['$MOONBOX', 88], ['$KINO', 420], ['$DOGWIF', 69], ['$NACHT', -42], ['$TEDDY', -77], ['$WAGMI', 999], ['$GRAVE', 13], ['$PACKAPUNCH', 5000]];
+  const html = coins.map(([t, v]) => `<span><b>${t}</b> <span class="${v >= 0 ? 'up' : 'dn'}">${v >= 0 ? '▲' : '▼'} ${Math.abs(v).toLocaleString()}%</span></span>`).join('');
+  $('ticker').innerHTML = html + html; // doubled so the scroll loops seamlessly
 }
 loadLeaderboard();
 $('cast').innerHTML = CHAR_IDS.map(id => `<figure><img src="${portrait(id)}" alt=""><figcaption>${CHARACTERS[id].name}</figcaption></figure>`).join('');
@@ -3172,6 +3440,10 @@ function clientUpdate(dt) {
       if (d > .001 && d < .75) { me.x += dx / d * (.75 - d); me.z += dz / d * (.75 - d); }
     }
     collide(me, 0.4, me.y);
+    { const [sc, sr] = cellOf(me.x, me.z), li = LINK[sr * MW + sc];
+      if (li !== undefined && doorsOpen[MAP[sr][sc]]) {
+        if (!me.onStair) { me.x += (li % MW - sc) * CELL; me.z += (((li / MW) | 0) - sr) * CELL; me.onStair = true; me.camY = me.y + EYE; sThud(.4); feed(sr < NACHT.uy ? 'Upstairs' : 'Downstairs', '#cfc6b6'); }
+      } else me.onStair = false; }
     const ground = groundAt(me.x, me.z);
     const onGround = me.y <= ground + .01;
     if (keys.Space && onGround && (locked || IS_TOUCH)) me.vy = 6.5;
@@ -3219,6 +3491,7 @@ function clientUpdate(dt) {
 
   if (powerShown) { screenT += dt; if (screenT > .08) { screenT = 0; drawScreen(t, true); } }
   for (const s of spinners) s.rotation.y += dt * 3 * s.userData.spin;
+  for (const ps of portalSheets) ps.material.opacity = .45 + Math.sin(t * 2.5) * .15;
 
   if (!state) return;
   const lerp = 1 - Math.exp(-dt * 12);
@@ -3329,7 +3602,7 @@ function clientUpdate(dt) {
 
   if (boxAnim) {
     boxAnim.t += dt;
-    const s = boxSpots[boxShown];
+    const s = boxSpots[boxAnim.loc !== undefined ? boxAnim.loc : boxShown];
     const spinning = boxAnim.t < boxAnim.dur - .4;
     const wid = spinning ? BOX_POOL[Math.floor(boxAnim.t * 8) % BOX_POOL.length] : boxAnim.w;
     if (!boxAnim.mesh || boxAnim.mesh.userData.w !== wid) {
