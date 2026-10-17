@@ -24,7 +24,7 @@
     background:repeating-linear-gradient(0deg, rgba(0,0,0,.18) 0 1px, transparent 1px 3px); }
   .ticker { overflow:hidden; border-bottom:1px solid #2e2220; background:rgba(7,6,10,.85); font-family:VT323, monospace; font-size:20px; letter-spacing:1px; white-space:nowrap; }
   .tk { display:inline-flex; gap:34px; padding:6px 0; animation:tick 40s linear infinite; }
-  .tk b { color:#e9e4da; font-weight:400; } .tk .up { color:#4ade80; } .tk .dn { color:#f05252; }
+  .tk b { color:#e9e4da; font-weight:400; } .tk .tkh { color:#c8f; } .tk .up { color:#4ade80; } .tk .dn { color:#f05252; }
   @keyframes tick { to { transform:translateX(-50%); } }
   @media (prefers-reduced-motion: reduce) { .tk { animation:none; } }
   .land { max-width:1180px; margin:0 auto; padding-block:clamp(24px, 6vh, 64px) 24px; padding-inline:max(20px, env(safe-area-inset-left, 0px)); display:grid; grid-template-columns:minmax(0, 470px) minmax(0, 1fr); gap:clamp(24px, 6vw, 88px); align-items:start; }
@@ -611,12 +611,13 @@ const WALL_GUNS = [
   { id: 'u', w: 'sniper', c: 65, r: 30, f: [0, 1] }, { id: 'v', w: 'sawed', c: 78, r: 36, f: [-1, 0] },
 ];
 // buildables: each part spawns at one of its spots; assemble them at the workbench
+// one part spot per room, every room behind a door: each game the 8 parts land in 8 different rooms
+const PART_ROOMS = [[6, 9], [4, 13], [6, 23], [15, 16], [23, 6], [36, 8], [34, 17], [37, 23], [44, 3], [46, 24], [36, 39], [2, 40], [25, 40]];
 const BUILDS = {
-  shield: { name: 'Zombie Shield', parts: [
-    { name: 'Door Panel', spots: [[44, 3], [2, 40]] }, { name: 'Handle Frame', spots: [[48, 24], [36, 39]] }, { name: 'Bolt Kit', spots: [[25, 40], [6, 9]] } ] },
-  cannon: { name: 'Projector Cannon', parts: [
-    { name: 'Arc Coil', spots: [[49, 2], [2, 31]] }, { name: 'Projector Lens', spots: [[33, 38], [43, 17]] }, { name: 'Film Reel', spots: [[15, 40], [46, 9]] } ] },
+  shield: { name: 'Zombie Shield', parts: [{ name: 'Door Panel' }, { name: 'Handle Frame' }, { name: 'Bolt Kit' }, { name: 'Hinge Plate' }] },
+  cannon: { name: 'Projector Cannon', parts: [{ name: 'Arc Coil' }, { name: 'Projector Lens' }, { name: 'Film Reel' }, { name: 'Power Cell' }] },
 };
+const PART_COUNT = { shield: BUILDS.shield.parts.length, cannon: BUILDS.cannon.parts.length };
 const PART_LIST = [];
 for (const b in BUILDS) BUILDS[b].parts.forEach((pt, i) => PART_LIST.push(Object.assign({ b, i }, pt)));
 const SHIELD_HP = 1200, SHIELD_REPLACE = 500;
@@ -927,7 +928,7 @@ function initHost() {
     mode: host ? host.mode : 'duo', startMode: null, departed: [],
     scene: 'kino', nachtOpen: false, transfer: null,
     special: null, nextDog: 5, nextBoss: 10, bossT: 0, dogHp: 0, fireSale: 0,
-    partSpot: PART_LIST.map(pt => Math.floor(Math.random() * pt.spots.length)), partTaken: PART_LIST.map(() => false),
+    partSpot: PART_ROOMS.map((_, i) => i).sort(() => Math.random() - .5).slice(0, PART_LIST.length), partTaken: PART_LIST.map(() => false),
     built: { shield: false, cannon: false }, cannonTaken: false,
   };
   doorsOpen = {};
@@ -2029,10 +2030,7 @@ function decorate() {
   }
   // --- Theater: rubble and blood among the seats, a fallen spotlight
   { blood(15, 12); blood(24, 16); blood(19, 18); blood(22, 7); rubble(11, 19, 0, .6); rubble(28, 9, 0, 0); crate(28, 19, .6, .6); }
-  // --- Back room: storage
-  { crate(1, 7, -.6, 0); crate(1, 7, -.6, 0, 1.1, 1); crate(1, 8, -.6, 0); crate(8, 9, .6, .4); barrel(8, 10, .7, .6); barrel(7, 10, .7, .7);
-    const shelf = box3(.6, 2.6, 4, mat('plank', [1, 2])); shelf.position.set(P(8, 7)[0] + 1.1, 1.3, P(8, 7)[1]); world.add(shelf); solid(shelf, .6, 4);
-    blood(4, 6); rubble(6, 5, 0, -.8); }
+  { blood(4, 6); } // back room is now the Gaming Room (see themed rooms below)
   // --- Alley: open sky, dumpster, cans, puddles, a street lamp
   {
     const dump = box3(1.2, 1.4, 2.4, new THREE.MeshLambertMaterial({ map: pixTex((x, y) => y < 3 ? hsl(140, 30, 18) : hsl(140, 35, 28 + J(8)), null, 16) }));
@@ -2046,7 +2044,7 @@ function decorate() {
     blood(4, 13); blood(3, 18); rubble(5, 12, 0, -.7);
   }
   // --- Lower hall: barrels, pipes along the ceiling
-  { barrel(8, 26, .7, .7); barrel(7, 26, .7, .8); crate(1, 24, -.6, 0);
+  { // lower hall is now the Kitchen (see themed rooms below)
     pipe(1 * CELL + .5, 22 * CELL + .4, 9 * CELL - .2, 22 * CELL + .4, 3.2); pipe(1 * CELL + .5, 22 * CELL + .8, 9 * CELL - .2, 22 * CELL + .8, 3.0);
     blood(3, 23); blood(6, 26); }
   // --- Dressing room: vanity mirrors with bulbs, costume racks
@@ -2068,12 +2066,11 @@ function decorate() {
     blood(34, 6); rubble(35, 5, 0, -.8);
   }
   // --- Foyer: benches, posters, plants
-  { bench(33, 14, 0, 0, Math.PI / 2); bench(33, 18, 0, 0, Math.PI / 2);
-    for (const r of [13, 17]) poster(30, r, [1, 0], 2.4);
+  { // foyer is now the Trading Floor (see themed rooms below)
     for (const c of [32, 37]) poster(c, 11, [0, 1], 2.4);
     plant(31, 16, -.8, 0); plant(38, 20, .8, .8); blood(36, 15); blood(32, 19); }
   // --- Upper hall: crates, pipes
-  { crate(31, 22, -.6, -.6); crate(31, 22, -.6, -.6, 1.1, 1); crate(37, 25, .4, .7, .9);
+  { // upper hall is now the AI Lab (see themed rooms below)
     pipe(31 * CELL, 22 * CELL + .3, 39 * CELL, 22 * CELL + .3, 3.2); blood(36, 23); }
   // --- Rooftop: chimneys, AC units, a water tower and the cinema sign
   {
@@ -2130,6 +2127,192 @@ function decorate() {
     for (let i = 0; i < 7; i++) { const s = rand(.3, .6); const coal = box3(s, s, s, new THREE.MeshLambertMaterial({ color: 0x141210 })); coal.position.set(P(7, 30)[0] + J(1.6), s / 2, P(7, 30)[1] + J(1.6)); world.add(coal); }
     blood(4, 39); rubble(2, 36, 0, 0);
   }
+  // ======================= THEMED ROOMS, built from batched blocks (few draw calls) =======================
+  {
+    const B = [], add = (key, w, h, d, x, y, z, ry = 0, rx = 0, rz = 0) => B.push([key, w, h, d, x, y, z, ry, rx, rz]);
+    // a statue or prop is built in its own local space, then rotated (ry) and placed at (ox, oy, oz)
+    const kit = (ox, oy, oz, ry) => (key, w, h, d, lx, ly, lz, rx = 0, rz = 0) => { const c = Math.cos(ry), s = Math.sin(ry); add(key, w, h, d, ox + lx * c + lz * s, oy + ly, oz - lx * s + lz * c, ry, rx, rz); };
+    const at = (c, r, ox = 0, oz = 0) => { const [x, z] = P(c, r); return [x + ox, z + oz]; };
+    const block = (x, z, w, d) => colliders.push({ x0: x - w / 2, x1: x + w / 2, z0: z - d / 2, z1: z + d / 2 });
+
+    // ---- statues ----
+    const shiba = (x, z, ry, s = 1, fur = 'gold', belly = 'gold', y = 0, plinth = true) => {
+      const k = kit(x, y, z, ry), b = plinth ? .5 : 0;
+      if (plinth) k('t:stone', 1.8 * s, .5, 2 * s, 0, .25, 0);
+      for (const [lx, lz] of [[-.28, .45], [.28, .45], [-.28, -.45], [.28, -.45]]) k(fur, .24 * s, .5 * s, .24 * s, lx * s, b + .25 * s, lz * s);
+      k(fur, .9 * s, .65 * s, 1.4 * s, 0, b + .78 * s, -.05 * s);
+      k(belly, .7 * s, .7 * s, .5 * s, 0, b + 1.15 * s, .55 * s);
+      k(fur, .85 * s, .7 * s, .75 * s, 0, b + 1.6 * s, .75 * s);
+      k(belly, .45 * s, .32 * s, .4 * s, 0, b + 1.45 * s, 1.25 * s);
+      k('c:111111', .14 * s, .11 * s, .06 * s, 0, b + 1.55 * s, 1.46 * s);
+      for (const sx of [-1, 1]) { k('c:111111', .1 * s, .1 * s, .04 * s, sx * .2 * s, b + 1.72 * s, 1.13 * s); k(fur, .22 * s, .32 * s, .14 * s, sx * .25 * s, b + 2.1 * s, .7 * s); }
+      k(fur, .26 * s, .26 * s, .5 * s, 0, b + 1.25 * s, -.8 * s); k(fur, .26 * s, .26 * s, .26 * s, 0, b + 1.5 * s, -.65 * s);
+      block(x, z, 1.8 * s, 1.8 * s);
+    };
+    const frog = (x, z, ry, s = 1) => { const k = kit(x, 0, z, ry);
+      k('t:stone', 1.6 * s, .5, 1.6 * s, 0, .25, 0); k('c:5aa838', 1.3 * s, .9 * s, 1.1 * s, 0, .95 * s, 0); k('c:5aa838', .5 * s, .4 * s, .5 * s, -.32 * s, 1.55 * s, .2 * s); k('c:5aa838', .5 * s, .4 * s, .5 * s, .32 * s, 1.55 * s, .2 * s);
+      for (const sx of [-1, 1]) { k('c:ffffff', .34 * s, .26 * s, .06 * s, sx * .32 * s, 1.58 * s, .46 * s); k('c:111111', .14 * s, .14 * s, .04 * s, sx * .32 * s, 1.56 * s, .5 * s); }
+      k('c:a33030', .8 * s, .1 * s, .06 * s, 0, 1.1 * s, .56 * s); block(x, z, 1.6 * s, 1.6 * s); };
+    const penguin = (x, z, ry, s = 1) => { const k = kit(x, 0, z, ry);
+      k('t:stone', 1.2 * s, .4, 1.2 * s, 0, .2, 0); k('c:1c1c24', .9 * s, 1.3 * s, .8 * s, 0, 1.05 * s, 0); k('c:f2f2f2', .6 * s, 1 * s, .1 * s, 0, .95 * s, .4 * s);
+      k('c:1c1c24', .7 * s, .6 * s, .7 * s, 0, 1.95 * s, 0); k('c:ffffff', .5 * s, .3 * s, .1 * s, 0, 2 * s, .34 * s); k('c:f0a020', .2 * s, .12 * s, .25 * s, 0, 1.9 * s, .45 * s);
+      for (const sx of [-1, 1]) { k('c:111111', .08 * s, .08 * s, .04 * s, sx * .12 * s, 2.06 * s, .4 * s); k('c:1c1c24', .15 * s, .7 * s, .4 * s, sx * .52 * s, 1.1 * s, 0, 0, sx * .3); k('c:f0a020', .25 * s, .08 * s, .35 * s, sx * .2 * s, .45 * s, .15 * s); }
+      block(x, z, 1.2 * s, 1.2 * s); };
+    const swordCat = (x, z, ry, s = 1) => { const k = kit(x, 0, z, ry);
+      k('t:stone', 1.4 * s, .5, 1.4 * s, 0, .25, 0); k('c:8a8a92', .8 * s, 1 * s, .7 * s, 0, 1.0 * s, 0); k('c:8a8a92', .75 * s, .65 * s, .65 * s, 0, 1.85 * s, .05 * s);
+      for (const sx of [-1, 1]) { k('c:8a8a92', .2 * s, .28 * s, .12 * s, sx * .24 * s, 2.3 * s, .05 * s); k('g:ffd36a', .1 * s, .1 * s, .04 * s, sx * .17 * s, 1.92 * s, .39 * s); }
+      k('c:f0b0c0', .08 * s, .06 * s, .04 * s, 0, 1.78 * s, .4 * s); k('c:8a8a92', .2 * s, .2 * s, .7 * s, .2 * s, .7 * s, -.55 * s, .6);
+      k('c:d8dde4', .08 * s, 1.6 * s, .2 * s, .55 * s, 1.75 * s, .25 * s, 0, -.35); k('c:7a5a2a', .4 * s, .08 * s, .1 * s, .45 * s, 1.0 * s, .25 * s, 0, -.35); // the sword
+      block(x, z, 1.4 * s, 1.4 * s); };
+    const bull = (x, z, ry, s = 1) => { const k = kit(x, 0, z, ry);
+      k('t:stone', 2.6 * s, .5, 1.4 * s, 0, .25, 0);
+      for (const [lx, lz] of [[-.8, -.35], [-.8, .35], [.8, -.35], [.8, .35]]) k('gold', .28 * s, .7 * s, .28 * s, lx * s, .85 * s, lz * s);
+      k('gold', 2.0 * s, .9 * s, 1 * s, 0, 1.55 * s, 0); k('gold', .8 * s, .8 * s, .8 * s, 1.25 * s, 1.85 * s, 0); k('gold', .4 * s, .35 * s, .55 * s, 1.7 * s, 1.65 * s, 0);
+      for (const sz of [-1, 1]) { k('gold', .5 * s, .12 * s, .12 * s, 1.4 * s, 2.35 * s, sz * .45 * s, 0, .6); k('c:111111', .04, .1 * s, .1 * s, 1.66 * s, 1.95 * s, sz * .25 * s); }
+      k('gold', .5 * s, .12 * s, .12 * s, -1.15 * s, 1.75 * s, 0, 0, -.6);
+      block(x, z, 2.6 * s, 1.4 * s); };
+    const robot = (x, z, ry, s = 1) => { const k = kit(x, 0, z, ry);
+      k('c:5a6470', .5 * s, .9 * s, .4 * s, -.25 * s, .45 * s, 0); k('c:5a6470', .5 * s, .9 * s, .4 * s, .25 * s, .45 * s, 0);
+      k('c:7a8490', 1.1 * s, 1.1 * s, .7 * s, 0, 1.45 * s, 0); k('g:5dffb0', .5 * s, .3 * s, .04 * s, 0, 1.55 * s, .36 * s);
+      k('c:7a8490', .7 * s, .55 * s, .6 * s, 0, 2.3 * s, 0); k('g:ff4040', .45 * s, .1 * s, .04 * s, 0, 2.35 * s, .31 * s);
+      for (const sx of [-1, 1]) k('c:5a6470', .28 * s, 1 * s, .28 * s, sx * .7 * s, 1.35 * s, .1 * s, -.4);
+      k('c:333333', .06, .5 * s, .06, .2 * s, 2.8 * s, 0); k('g:ff4040', .14, .14, .14, .2 * s, 3.05 * s, 0);
+      block(x, z, 1.4 * s, 1 * s); };
+    // ---- furniture & machines ----
+    const arcade = (x, z, ry, col) => { const k = kit(x, 0, z, ry);
+      k('c:' + col, .95, 1.9, .85, 0, .95, 0); k('arcade', .72, .55, .04, 0, 1.45, .44, -.12); k('g:' + col, .9, .22, .06, 0, 1.95, .43);
+      k('c:1a1a1a', .95, .12, .38, 0, 1.02, .55, .3); k('g:ff3a3a', .08, .08, .08, -.18, 1.1, .6); k('g:3ab0ff', .08, .08, .08, .05, 1.1, .6); k('g:ffd23a', .08, .08, .08, .2, 1.1, .6);
+      block(x, z, .95, .85); };
+    const gamingChair = (x, z, ry, col) => { const k = kit(x, 0, z, ry);
+      k('c:1a1a1a', .6, .12, .6, 0, .55, 0); k('c:' + col, .6, .9, .14, 0, 1.0, -.27); k('c:1a1a1a', .6, .5, .14, 0, 1.45, -.27); k('c:333333', .08, .5, .08, 0, .25, 0); k('c:333333', .7, .05, .05, 0, .05, 0); k('c:333333', .05, .05, .7, 0, .05, 0); };
+    const desk = (x, z, ry, monitors = 3) => { const k = kit(x, 0, z, ry);
+      k('c:2a2a30', 2.4, .08, .9, 0, .8, 0); for (const lx of [-1.1, 1.1]) k('c:1a1a1a', .08, .8, .8, lx, .4, 0);
+      for (let i = 0; i < monitors; i++) { const lx = (i - (monitors - 1) / 2) * .75; k('c:111111', .7, .45, .05, lx, 1.3, -.25, 0, 0); k('chart', .64, .39, .02, lx, 1.3, -.22); k('c:111111', .06, .25, .06, lx, .95, -.28); }
+      k('g:3affb0', .4, .03, .15, 0, .86, .15); block(x, z, 2.4, .9); };
+    const counter = (x, z, ry, w = 2.6, top = 't:stone') => { const k = kit(x, 0, z, ry); k('c:e8e0d0', w, .9, .8, 0, .45, 0); k(top, w + .1, .08, .9, 0, .94, 0); block(x, z, Math.abs(Math.sin(ry)) > .5 ? .8 : w, Math.abs(Math.sin(ry)) > .5 ? w : .8); };
+    const rack = (x, z, ry) => { const k = kit(x, 0, z, ry); k('c:1c1e24', .9, 2.6, .9, 0, 1.3, 0);
+      for (let i = 0; i < 7; i++) { k('c:2a2e36', .8, .22, .04, 0, .4 + i * .32, .46); k(i % 3 ? 'g:3affb0' : 'g:3ab0ff', .06, .06, .03, -.3 + (i % 2) * .1, .4 + i * .32, .48); k('g:ff4040', .04, .04, .03, .3, .4 + i * .32, .48); }
+      block(x, z, .9, .9); };
+    const plush = (x, y, z, ry, kind, s = .35) => { const k = kit(x, y, z, ry);
+      const body = { shiba: 'c:e08a3a', frog: 'c:5aa838', cat: 'c:8a8a92', peng: 'c:1c1c24' }[kind];
+      k(body, .8 * s, .7 * s, .7 * s, 0, .35 * s, 0); k(body, .7 * s, .6 * s, .6 * s, 0, .95 * s, .05 * s);
+      if (kind === 'shiba' || kind === 'cat') for (const sx of [-1, 1]) k(body, .16 * s, .22 * s, .1 * s, sx * .22 * s, 1.35 * s, .05 * s);
+      for (const sx of [-1, 1]) k('c:111111', .09 * s, .09 * s, .03, sx * .15 * s, 1.0 * s, .36 * s);
+      if (kind === 'peng') k('c:f0a020', .15 * s, .1 * s, .15 * s, 0, .9 * s, .4 * s); };
+    const neon = (x, y, z, ry, text, col, w = 3) => { const sp = textSprite(text, col, 72); sp.position.set(x, y, z); sp.scale.set(w, w / 4, 1); fxGroup.add(sp); };
+    const strip = (x0, z0, x1, z1, y, col) => add('g:' + col, Math.max(.06, Math.abs(x1 - x0)), .06, Math.max(.06, Math.abs(z1 - z0)), (x0 + x1) / 2, y, (z0 + z1) / 2);
+
+    // LOBBY — Hall of Fame: giant gold shibas guarding the balconies
+    shiba(...at(13, 21, .4, .2), Math.PI / 4, 1.25, 'gold', 'gold', 1);   // both face into the lobby
+    shiba(...at(26, 21, -.4, .2), -Math.PI / 4, 1.25, 'gold', 'gold', 1);
+    neon(...[P(19.5, 21)[0], 5.2, P(19.5, 21)[1] + .3], 0, 'HALL OF FAME', '#ffd36a', 6);
+
+    // THEATER — premiere night: gold shibas flanking the stage, a frog and a penguin in the front row
+    shiba(...at(11, 9, 0, .2), 0, 1.4); shiba(...at(28, 9, 0, .2), 0, 1.4);
+    frog(...at(10, 16, .3, 0), Math.PI / 2, .9); penguin(...at(29, 17, -.3, 0), -Math.PI / 2, 1);
+
+    // BACK ROOM — Gaming & Streaming Room: arcade row, gaming chairs, a stream rig, RGB everywhere
+    arcade(...at(3, 5, 0, -.9), 0, '7a2aff'); arcade(...at(4, 5, 0, -.9), 0, 'ff2a8a'); arcade(...at(5, 5, 0, -.9), 0, '2ad8ff');
+    gamingChair(...at(3, 6, 0, .4), Math.PI, 'ff2a8a'); gamingChair(...at(5, 6, 0, .4), Math.PI, '2ad8ff');
+    desk(...at(1, 9, -.4, .2), Math.PI / 2, 2); gamingChair(...at(2, 9, .1, .2), -Math.PI / 2, '7a2aff');
+    { const [x, z] = at(7, 9, .5, .5); add('c:7a2aff', .9, .5, .9, x, .25, z); add('c:ff2a8a', .8, .35, .8, x, .62, z); } // bean bag
+    for (const [x0, z0, x1, z1] of [[3, 15.1, 27, 15.1], [3.1, 15, 3.1, 33]]) strip(x0, z0, x1, z1, 3.3, 'ff2a8a');
+    strip(3, 15.15, 27, 15.15, 3.1, '2ad8ff');
+    neon(P(4, 5)[0], 3.0, P(4, 5)[1] - 1.2, 0, 'GAME ROOM', '#ff5ac8', 3.4); neon(P(1, 9)[0] + .4, 2.6, P(1, 9)[1] - .2, 0, '● LIVE', '#ff3030', 1.6);
+
+    // ALLEY — street market: vending machines, neon, the sword cat
+    for (const [r, col] of [[13, 'ff3a3a'], [14, '3ab0ff']]) { const [x, z] = at(2, r, -.95, 0); add('c:' + col, .8, 2.0, 1.0, x, 1.0, z); add('g:ffffff', .04, 1.2, .7, x + .42, 1.25, z); add('g:' + col, .05, .3, .8, x + .43, 1.95, z); block(x, z, .8, 1.0); }
+    swordCat(...at(6, 16, .6, 0), -Math.PI / 2, 1.1);
+    neon(P(4, 12)[0], 4.6, P(4, 12)[1], 0, 'NIGHT MARKET', '#3affd0', 4); neon(P(4, 20)[0], 4.4, P(4, 20)[1], 0, 'RAMEN · BOBA · $SHIFT', '#ff7ac8', 4.5);
+
+    // LOWER HALL — Kitchen: fridge, stove, counters, the grill (the fire pit), hanging pans
+    { const [x, z] = at(8, 26, .55, .55); add('c:dfe4ea', 1.2, 2.3, 1.0, x, 1.15, z); add('c:9aa4ae', .06, .9, .06, x - .62, 1.4, z + .3); block(x, z, 1.2, 1.0); } // fridge
+    { const [x, z] = at(7, 26, .3, .6); add('c:2a2a2a', 1.2, .95, .9, x, .48, z); for (const [lx, lz] of [[-.28, -.2], [.28, -.2], [-.28, .2], [.28, .2]]) add('g:ff5a1a', .3, .03, .3, x + lx, .97, z + lz); add('c:c0c4ca', 1.2, .9, .3, x, 2.4, z + .3); block(x, z, 1.2, .9); } // stove + hood
+    counter(...at(1, 23, -.55, 0), Math.PI / 2, 2.4); counter(...at(1, 25, -.55, 0), Math.PI / 2, 2.4, 'c:6a4426');
+    for (let i = 0; i < 4; i++) add('c:3a3a3a', .45, .06, .45, P(3 + i, 22)[0], 2.6, P(3, 22)[1] - 1.1, 0, 0, .2);
+    { const [x, z] = at(6, 25, .2, .3); add('c:c8a070', .7, .08, .7, x, .02, z); add('c:e0d0b0', .6, .25, .6, x, .2, z); add('c:a0301a', .5, .02, .5, x, .33, z); } // pizza box
+    neon(P(4.5, 22)[0], 2.9, P(4.5, 22)[1] - 1.3, 0, 'KITCHEN · GRILL $1000', '#ffb03a', 3.6);
+
+    // DRESSING ROOM — anime idol room: a little performance riser, plushies, pink neon, a penguin
+    { const [x, z] = at(34.5, 6, 0, -.2); add('t:plank', 3, .3, 1.8, x, .15, z); add('c:333333', .05, 1.5, .05, x, 1.05, z); add('c:111111', .14, .2, .14, x, 1.85, z); }
+    for (const [c, kind] of [[32, 'shiba'], [33, 'frog'], [36, 'cat'], [37, 'peng']]) plush(P(c, 10)[0], .9, P(c, 10)[1] + .95, Math.PI, kind);
+    penguin(...at(38, 9, .3, -.2), -Math.PI / 2, .85);
+    strip(31 * CELL + .1, 5 * CELL, 31 * CELL + .1, 11 * CELL, 3.3, 'ff5ac8'); strip(31 * CELL, 5 * CELL + .1, 39 * CELL, 5 * CELL + .1, 3.3, 'ff5ac8');
+    neon(P(34.5, 5)[0], 3.0, P(34.5, 5)[1] - .9, 0, '★ IDOL STAGE ★', '#ff8ae0', 3.6);
+
+    // FOYER — Trading Floor: trading desks, a gold bull, and the live ticker board (built below)
+    desk(...at(32, 14, -.3, 0), Math.PI / 2); desk(...at(32, 18, -.3, 0), Math.PI / 2);
+    gamingChair(...at(33, 14, 0, 0), -Math.PI / 2, '3affb0'); gamingChair(...at(33, 18, 0, 0), -Math.PI / 2, '3affb0');
+    bull(...at(37, 14, 0, -.2), -Math.PI / 2, .95);
+    neon(P(35, 12)[0], 3.9, P(35, 12)[1] - 1.2, 0, 'TRADING FLOOR', '#3affb0', 3.6);
+
+    // UPPER HALL — AI lab / server room: racks, cables, a hologram
+    rack(...at(36, 22, 0, -.9), 0); rack(...at(37, 22, 0, -.9), 0); rack(...at(31, 25, -.9, 0), Math.PI / 2); rack(...at(31, 22, -.9, -.2), Math.PI / 2);
+    for (let i = 0; i < 5; i++) add(i % 2 ? 'c:203040' : 'c:402020', .1, .05, 4.5, P(35.5, 23.5)[0] + i * .15, .03, P(35.5, 23.5)[1]);
+    { const holo = textSprite('◆ AI AGENT ONLINE ◆', '#5dffe0', 54); holo.position.set(P(36.5, 24)[0], 2.4, P(36.5, 24)[1]); holo.scale.set(3.4, .85, 1); fxGroup.add(holo); }
+
+    // ROOFTOP — moon launch pad: a rocket, a howling stone shiba, a telescope and a dish
+    { const [x, z] = at(45.5, 6.5); const k = kit(x, 0, z, 0);
+      k('c:3a3a3a', 3.4, .3, 3.4, 0, .15, 0); k('c:e8e8ec', 1.2, 4.8, 1.2, 0, 2.7, 0); k('c:d43a3a', .9, 1.2, .9, 0, 5.7, 0); k('c:d43a3a', .5, .6, .5, 0, 6.55, 0);
+      k('g:6ac8ff', .5, .5, .05, 0, 4.0, .62); for (const [lx, lz] of [[-.8, 0], [.8, 0], [0, -.8], [0, .8]]) k('c:d43a3a', .5, 1.2, .5, lx, .9, lz); k('g:ff8a1a', .6, .4, .6, 0, .4, 0);
+      block(x, z, 3, 3); neon(x, 7.6, z, 0, '$SHIFT → 🌙', '#ffd36a', 3.4); }
+    shiba(...at(48, 8, .3, 0), Math.PI * .75, 1, 'c:8a8a90', 'c:a8a8ae'); // howling toward the moon
+    { const [x, z] = at(42, 8); const k = kit(x, 0, z, .7); k('c:333333', .1, 1.4, .1, 0, .7, 0); k('c:c8c8d0', .3, .3, 1.4, 0, 1.6, .2, -.5); } // telescope
+    { const [x, z] = at(47, 2); const k = kit(x, 0, z, .4); k('c:555555', .15, 1.5, .15, 0, .75, 0); k('c:dcdcdc', 1.4, 1.4, .12, 0, 1.8, .1, -.5); k('g:ff4040', .1, .1, .1, 0, 2.3, .6); }
+
+    // LOADING DOCK — Shiba Shipping Co.: a shiba riding the truck, $SHIFT crates, a forklift
+    shiba(P(49, 17)[0] + .2, P(49, 17)[1] + 2.2, Math.PI, 1, 'c:e08a3a', 'c:f6ead8', 2.6, false);
+    for (const [c, r, y] of [[44, 15, 0], [44, 15, 1], [47, 15, 0]]) add('shift', 1.2, 1.2, 1.2, P(c, r)[0], .6 + y * 1.2, P(c, r)[1] - .8);
+    block(P(44, 15)[0], P(44, 15)[1] - .8, 1.2, 1.2); block(P(47, 15)[0], P(47, 15)[1] - .8, 1.2, 1.2);
+    { const [x, z] = at(43, 20); const k = kit(x, 0, z, .5); k('c:e8b020', 1.2, 1.0, 2, 0, .7, 0); k('c:222222', 1.0, .9, .8, 0, 1.65, -.4); k('c:333333', .1, 2.4, .1, -.4, 1.2, 1.1); k('c:333333', .1, 2.4, .1, .4, 1.2, 1.1); k('c:555555', 1, .08, .9, 0, .2, 1.5); block(x, z, 1.6, 2.4); }
+    neon(P(45, 14)[0], 4.2, P(45, 14)[1] - 1.2, 0, 'SHIBA SHIPPING CO.', '#ffb03a', 4.2);
+
+    // BOX OFFICE — Merch Store: plush shelves, a $SHIFT shirt rack, a giant shiba plush
+    for (const r of [33, 34, 35]) { const [x, z] = at(31, r, -.95, 0); add('t:plank', .7, 2.2, 2.6, x, 1.1, z); block(x, z, .7, 2.6);
+      for (let i = 0; i < 3; i++) for (let j = 0; j < 2; j++) plush(x + .1, .7 + j * .75, z - .8 + i * .8, Math.PI / 2, ['shiba', 'frog', 'cat', 'peng'][(i + j + r) % 4], .28); }
+    { const [x, z] = at(34, 37, 0, 0); add('c:888888', 2.4, .06, .06, x, 1.8, z); for (let i = 0; i < 5; i++) add(['c:111111', 'c:ffd36a', 'c:3affb0', 'c:ff5ac8', 'c:3ab0ff'][i], .45, .8, .1, x - 1 + i * .5, 1.35, z); add('c:555555', .06, 1.8, .06, x - 1.2, .9, z); add('c:555555', .06, 1.8, .06, x + 1.2, .9, z); }
+    shiba(...at(33, 39, 0, .5), Math.PI, 1.15, 'c:e08a3a', 'c:f6ead8', 0, false);
+    neon(P(34.5, 27)[0], 3.7, P(34.5, 27)[1] - .9, 0, 'OFFICIAL MERCH', '#ffd36a', 3.4);
+
+    // WORKSHOP — maker space: a robot, a 3D printer, tool wall glow
+    robot(...at(23, 37, 0, 0), -Math.PI / 2, 1.1);
+    { const [x, z] = at(11, 36, -.6, 0); add('c:2a2a30', 1.1, 1.2, 1.1, x, .6, z); add('g:3ab0ff', .9, .06, .9, x, 1.0, z); add('c:e8b020', .25, .25, .25, x, .85, z); block(x, z, 1.1, 1.1); }
+    neon(P(19.5, 34)[0], 4.2, P(19.5, 34)[1] - 1.2, 0, 'MAKER SPACE', '#5dffb0', 3.4);
+
+    // BOILER ROOM — boiler & cleaner's room: washers, a mop cart, chemicals, a wet floor sign
+    for (const c of [3, 4, 5]) { const [x, z] = at(c, 41, 0, .75); add('c:eef0f2', .95, 1.0, .9, x, .5, z); add('c:2a3a4a', .55, .55, .05, x, .55, z - .46); add('g:3ab0ff', .3, .3, .04, x, .55, z - .47); block(x, z, .95, .9); }
+    { const [x, z] = at(7, 33, .3, 0); add('c:e8b020', .9, .6, .6, x, .4, z); add('c:3a6ac8', .4, .35, .4, x - .2, .85, z); add('c:7a5a2a', .05, 1.4, .05, x + .25, 1.1, z); block(x, z, .9, .6); } // mop cart
+    { const [x, z] = at(1, 37, -.75, 0); add('t:plank', .6, 2, 2.4, x, 1, z); block(x, z, .6, 2.4); for (let i = 0; i < 6; i++) add(['c:3ab0ff', 'c:ffd23a', 'c:ff5a5a'][i % 3], .3, .4, .3, x + .1, .5 + Math.floor(i / 3) * .8, z - .8 + (i % 3) * .8); }
+    { const [x, z] = at(5, 31); const k = kit(x, 0, z, .3); k('c:ffd23a', .6, 1, .08, 0, .5, .15, .2); k('c:ffd23a', .6, 1, .08, 0, .5, -.15, -.2); }
+    neon(P(4.5, 28)[0], 4.2, P(4.5, 28)[1] - 1, 0, 'CAUTION · WET FLOOR', '#ffd23a', 3.4);
+
+    // PROJECTOR ROOM — a little gold inu shrine next to the Re-Cut machine
+    shiba(...at(14, 1, .5, .3), Math.PI * .75, .8);
+
+    // ---- build all of it as one instanced mesh per material ----
+    const keyMat = key => {
+      if (MATS['deco' + key]) return MATS['deco' + key];
+      let m;
+      if (key === 'gold') m = new THREE.MeshLambertMaterial({ map: TEX.gold([1, 1]), emissive: 0x2a1a00 });
+      else if (key === 'arcade') m = new THREE.MeshBasicMaterial({ map: arcadeTex });
+      else if (key === 'chart') m = new THREE.MeshBasicMaterial({ map: chartTex });
+      else if (key === 'shift') m = new THREE.MeshLambertMaterial({ map: shiftCrateTex });
+      else if (key.startsWith('t:')) m = mat(key.slice(2), [1, 1]);
+      else if (key.startsWith('g:')) m = new THREE.MeshBasicMaterial({ color: parseInt(key.slice(2), 16) });
+      else m = new THREE.MeshLambertMaterial({ color: parseInt(key.slice(2), 16) });
+      return (MATS['deco' + key] = m);
+    };
+    const groups = {}; for (const b of B) (groups[b[0]] = groups[b[0]] || []).push(b);
+    const unit = new THREE.BoxGeometry(1, 1, 1), m4 = new THREE.Matrix4(), pos = new THREE.Vector3(), sc = new THREE.Vector3(), qt = new THREE.Quaternion(), eu = new THREE.Euler(0, 0, 0, 'YXZ');
+    for (const key in groups) {
+      const list = groups[key], im = new THREE.InstancedMesh(unit, keyMat(key), list.length);
+      list.forEach(([, w, h, d, x, y, z, ry, rx, rz], i) => { pos.set(x, y, z); sc.set(w, h, d); qt.setFromEuler(eu.set(rx, ry, rz)); m4.compose(pos, qt, sc); im.setMatrixAt(i, m4); });
+      world.add(im);
+    }
+    // the trading floor's live board: the real pump.fun trending list, updated from the server
+    const board = new THREE.Mesh(new THREE.PlaneGeometry(11, 2.6), new THREE.MeshBasicMaterial({ map: boardTex }));
+    const bf = wallFace({ c: 30, r: 15, f: [1, 0] }); board.position.set(bf.x + .04, 2.7, bf.z + 1.5); board.rotation.y = Math.PI / 2; world.add(board);
+  }
   // --- meme-coin slop all over Kino: original pixel posters, billboards and graffiti
   {
     const meme = (c, r, f, kind, w = 1.6, h = 2.1, y = 2.2) => {
@@ -2155,11 +2338,11 @@ function decorate() {
     const [tx, tz] = P(...NG(9, 6)); const table = box3(2, .1, 1, mat('plank', [1, 1])); table.position.set(tx, .9, tz); world.add(table);
     for (const [lx, lz] of [[-.9, -.4], [.9, -.4], [-.9, .4], [.9, .4]]) { const leg = box3(.1, .9, .1, mat('dark', [1, 1])); leg.position.set(tx + lx, .45, tz + lz); world.add(leg); }
     const radio = box3(.5, .35, .3, mat('metal', [1, 1])); radio.position.set(tx + .4, 1.12, tz); world.add(radio);
-    crate(...NG(23, 20), .6, .6); crate(...NG(23, 20), .6, .6, 1.1, 1); barrel(...NG(2, 18), -.6, .6); crate(...NG(10, 9), .6, -.6);
+    crate(...NG(23, 20), .6, .6); crate(...NG(23, 20), .6, .6, 1.1, 1); barrel(...NG(9, 15), .6, 0); crate(...NG(10, 9), .6, -.6);
     blood(...NG(16, 12)); blood(...NG(7, 14)); blood(...NG(20, 16)); rubble(...NG(15, 19), 0, .4);
     // upstairs
     for (const [c, r] of [NU(3, 4), NU(22, 19)]) { const cot = box3(1.2, .4, 2.4, new THREE.MeshLambertMaterial({ color: 0x4a5a3a })); const [x, z] = P(c, r); cot.position.set(x, .2, z); world.add(cot); }
-    crate(...NU(10, 4), .6, -.6); crate(...NU(23, 9), .6, -.6); barrel(...NU(2, 17), -.6, 0); barrel(...NU(13, 20), 0, .6);
+    crate(...NU(10, 4), .6, -.6); crate(...NU(24, 19), .6, .6); barrel(...NU(9, 15), .6, 0); barrel(...NU(13, 20), 0, .6);
     blood(...NU(6, 10)); blood(...NU(17, 15)); rubble(...NU(15, 11), 0, 0); rubble(...NU(8, 16), 0, 0);
   }
   // --- Projector/upgrade room: film reels stacked around
@@ -2179,12 +2362,47 @@ function makePartModel(name) {
   if (name === 'Door Panel') inner.add(box3(.7, .9, .08, mat('board', [1, 1])));
   else if (name === 'Handle Frame') { inner.add(box3(.7, .08, .08, mat('metal', [1, 1]))); const h = box3(.08, .4, .08, mat('metal', [1, 1])); h.position.y = -.2; inner.add(h); }
   else if (name === 'Bolt Kit') inner.add(box3(.45, .25, .3, mat('metal', [1, 1])));
+  else if (name === 'Hinge Plate') { inner.add(box3(.5, .5, .06, mat('metal', [1, 1]))); const pin = box3(.08, .55, .08, brass); pin.position.x = -.25; inner.add(pin); }
+  else if (name === 'Power Cell') { inner.add(box3(.26, .5, .26, mat('metal', [1, 1]))); const c = box3(.2, .3, .28, new THREE.MeshBasicMaterial({ color: 0x5dffb0 })); inner.add(c); }
   else if (name === 'Arc Coil') inner.add(new THREE.Mesh(new THREE.TorusGeometry(.22, .07, 4, 10), brass));
   else if (name === 'Projector Lens') { const l = new THREE.Mesh(new THREE.CylinderGeometry(.2, .2, .14, 10), new THREE.MeshBasicMaterial({ color: 0x9fe8ff })); l.rotation.x = Math.PI / 2; inner.add(l); }
   else { const r = new THREE.Mesh(new THREE.CylinderGeometry(.3, .3, .08, 10), mat('metal', [1, 1])); r.rotation.x = Math.PI / 2; inner.add(r); }
   const lab = textSprite(name, '#fd6', 46); lab.position.y = .75; lab.scale.set(1.5, .38, 1); g.add(lab);
   return g;
 }
+const arcadeCv = document.createElement('canvas'); arcadeCv.width = 32; arcadeCv.height = 24;
+const arcadeTex = new THREE.CanvasTexture(arcadeCv); arcadeTex.magFilter = THREE.NearestFilter;
+function drawArcade(t) {
+  const g = arcadeCv.getContext('2d'); g.fillStyle = '#05050a'; g.fillRect(0, 0, 32, 24);
+  for (let i = 0; i < 12; i++) { g.fillStyle = ['#ff2a8a', '#2ad8ff', '#ffd23a', '#7a2aff'][i % 4]; g.fillRect((i * 7 + t * 9) % 32 | 0, (i * 5) % 18, 3, 2); }
+  g.fillStyle = '#3affb0'; g.fillRect(14 + Math.sin(t * 3) * 8 | 0, 19, 4, 3); arcadeTex.needsUpdate = true;
+}
+const chartCv = document.createElement('canvas'); chartCv.width = 48; chartCv.height = 28;
+const chartTex = new THREE.CanvasTexture(chartCv); chartTex.magFilter = THREE.NearestFilter;
+function drawChart(t) {
+  const g = chartCv.getContext('2d'); g.fillStyle = '#060a08'; g.fillRect(0, 0, 48, 28);
+  for (let i = 0; i < 12; i++) { const v = Math.sin(i * .9 + t * .7) * 6 + i * .8, up = Math.sin(i * 2.1 + t) > -.2; g.fillStyle = up ? '#3ade80' : '#f05252'; g.fillRect(2 + i * 4, 20 - v, 3, 3 + Math.abs(Math.cos(i + t)) * 5); }
+  chartTex.needsUpdate = true;
+}
+const shiftCrateTex = (() => { const cv = document.createElement('canvas'); cv.width = cv.height = 32; const g = cv.getContext('2d');
+  for (let y = 0; y < 32; y++) for (let x = 0; x < 32; x++) { g.fillStyle = (x < 2 || x > 29 || y < 2 || y > 29) ? '#5a3a1e' : `hsl(32,45%,${40 + (x * 7 + y * 13) % 9}%)`; g.fillRect(x, y, 1, 1); }
+  g.fillStyle = '#1a1208'; g.font = 'bold 11px VT323, monospace'; g.textAlign = 'center'; g.fillText('$SHIFT', 16, 15); g.font = '7px VT323, monospace'; g.fillText('FRAGILE', 16, 24);
+  const t = new THREE.CanvasTexture(cv); t.magFilter = THREE.NearestFilter; return t; })();
+const boardCv = document.createElement('canvas'); boardCv.width = 512; boardCv.height = 120;
+const boardTex = new THREE.CanvasTexture(boardCv);
+let boardCoins = [];
+function drawBoard(t) {
+  const g = boardCv.getContext('2d'); g.fillStyle = '#020403'; g.fillRect(0, 0, 512, 120);
+  g.fillStyle = '#3affb0'; g.font = '22px VT323, monospace'; g.textAlign = 'left';
+  g.fillText(boardCoins.live ? 'LIVE · TRENDING ON PUMP.FUN · 24H' : 'TRADING FLOOR · MARKETS', 12, 24);
+  const list = boardCoins.length ? boardCoins : [['$SHIFT', 4200], ['$BRAINZ', 1337], ['$RUGGED', -99], ['$FROGZ', 690]];
+  const per = 8, start = Math.floor(t / 4) * per % Math.max(1, list.length);
+  for (let i = 0; i < per; i++) { const [s, v] = list[(start + i) % list.length], x = 12 + (i % 4) * 125, y = 62 + Math.floor(i / 4) * 40;
+    g.fillStyle = '#e9e4da'; g.font = '22px VT323, monospace'; g.fillText(String(s).slice(0, 10), x, y);
+    g.fillStyle = v >= 0 ? '#3ade80' : '#f05252'; g.fillText((v >= 0 ? '▲' : '▼') + Math.abs(v).toFixed(0) + '%', x, y + 20); }
+  boardTex.needsUpdate = true;
+}
+let decoT = 0;
 // pixel-art meme posters (all original: generic frog, shiba, rockets, charts, our own $SHIFT coin)
 function memeTex(kind, aspect) {
   const H = 64, W = Math.round(H * aspect), cv = document.createElement('canvas'); cv.width = W; cv.height = H;
@@ -2651,7 +2869,7 @@ function onState(m) {
   if (m.st && !gameStarted && !lateJoin) beginGame();
   for (const d of m.doors) if (!doorsOpen[d]) openDoorVisual(d);
   if (m.pw && !powerShown) applyPower();
-  partMeshes.forEach((pm, i) => { const at = m.pp[i]; pm.visible = at >= 0; if (at >= 0) { const [x, z] = cellCenter(...PART_LIST[i].spots[at]); pm.position.x = x; pm.position.z = z; } });
+  partMeshes.forEach((pm, i) => { const at = m.pp[i]; pm.visible = at >= 0; if (at >= 0) { const [x, z] = cellCenter(...PART_ROOMS[at]); pm.position.set(x, groundAt(x, z) + .7, z); } });
   benchShield.visible = !!m.bd[0]; benchCannon.visible = m.bd[1] === 1;
   if (m.bx !== boxShown && !boxAnim) placeBox(m.bx);
   padMat.color.setHex(m.ln ? 0x55ffff : m.pw ? 0x335555 : 0x223333);
@@ -3022,16 +3240,16 @@ function findInteract() {
   for (let i = 0; i < PART_LIST.length; i++) {
     const at = state.pp[i]; if (at < 0) continue;
     const pt = PART_LIST[i];
-    if (near(pt.spots[at], 2.4)) return { kind: 'part', id: i, label: `Press <b>F</b> to pick up the ${pt.name} <b>(${BUILDS[pt.b].name} part)</b>` };
+    if (near(PART_ROOMS[at], 2.4)) return { kind: 'part', id: i, label: `Press <b>F</b> to pick up the ${pt.name} <b>(${BUILDS[pt.b].name} part)</b>` };
   }
   if (near(benchCell, 3.0)) {
     const have = b => PART_LIST.filter((pt, i) => pt.b === b && state.pp[i] === -1).length;
     const mine = state.ps.find(p => p.id === net.myId) || {};
-    if (!state.bd[0] && have('shield') === 3) return { kind: 'build', b: 'shield', label: 'Press <b>F</b> to build the <b>Zombie Shield</b>' };
-    if (!state.bd[1] && have('cannon') === 3) return { kind: 'build', b: 'cannon', label: 'Press <b>F</b> to build the <b>Projector Cannon</b>' };
+    if (!state.bd[0] && have('shield') === PART_COUNT.shield) return { kind: 'build', b: 'shield', label: 'Press <b>F</b> to build the <b>Zombie Shield</b>' };
+    if (!state.bd[1] && have('cannon') === PART_COUNT.cannon) return { kind: 'build', b: 'cannon', label: 'Press <b>F</b> to build the <b>Projector Cannon</b>' };
     if (state.bd[1] === 1) return { kind: 'cannon', label: 'Press <b>F</b> to take the <b>Projector Cannon</b> (only one exists)' };
     if (state.bd[0] && me.shield <= 0) return { kind: 'shield', label: `Press <b>F</b> to take a <b>Zombie Shield</b> <b>[${mine.sn ? '$' + SHIELD_REPLACE : 'free'}]</b>` };
-    return { kind: 'none', label: `Workbench — Shield parts ${have('shield')}/3 · Cannon parts ${have('cannon')}/3` };
+    return { kind: 'none', label: `Workbench — Shield parts ${have('shield')}/${PART_COUNT.shield} · Cannon parts ${have('cannon')}/${PART_COUNT.cannon}` };
   }
   for (const loc of [state.bx, NACHT_BOX]) if (near(boxCells[loc], 3.0)) {
     if (loc === state.bx && state.bm) return { kind: 'none', label: 'The box is moving…' };
@@ -3105,7 +3323,7 @@ function drawMinimap() {
       g.beginPath(); g.arc(m.position.x, m.position.z, k === 2 ? 1.6 : k === 1 ? .55 : .7, 0, 7); g.fill();
     }
     g.fillStyle = '#fff';
-    PART_LIST.forEach((pt, i) => { if (state.pp[i] >= 0) { const [x, z] = cellCenter(...pt.spots[state.pp[i]]); g.fillRect(x - .7, z - .7, 1.4, 1.4); } });
+    PART_LIST.forEach((pt, i) => { if (state.pp[i] >= 0) { const [x, z] = cellCenter(...PART_ROOMS[state.pp[i]]); g.fillRect(x - .7, z - .7, 1.4, 1.4); } });
     // teammates
     const blink = Math.sin(now() * 10) > 0;
     for (const p of state.ps) {
@@ -3400,11 +3618,19 @@ if (urlCode && /^[A-Za-z0-9]{5}$/.test(urlCode)) {
   $('joinBtn').classList.remove('ghost'); $('hostBtn').classList.add('ghost');
   $('name').addEventListener('keydown', e => { if (e.key === 'Enter') $('joinBtn').click(); });
 }
-{ // fictional coins, all slop
-  const coins = [['$SHIFT', 4200], ['$BRAINZ', 1337], ['$RUGGED', -99], ['$FROGZ', 690], ['$MOONBOX', 88], ['$KINO', 420], ['$DOGWIF', 69], ['$NACHT', -42], ['$TEDDY', -77], ['$WAGMI', 999], ['$GRAVE', 13], ['$PACKAPUNCH', 5000]];
-  const html = coins.map(([t, v]) => `<span><b>${t}</b> <span class="${v >= 0 ? 'up' : 'dn'}">${v >= 0 ? '▲' : '▼'} ${Math.abs(v).toLocaleString()}%</span></span>`).join('');
+// landing ticker: live pump.fun trending coins (24h change) when the game server can reach GeckoTerminal, joke coins otherwise
+function renderTicker(coins, live) {
+  const head = live ? '<span class="tkh">TRENDING ON PUMP.FUN · 24H</span>' : '';
+  const tail = live ? '<span class="tkh">DATA: GECKOTERMINAL · NOT FINANCIAL ADVICE</span>' : '';
+  const html = head + coins.map(([t, v]) => `<span><b>${esc(t)}</b> <span class="${v >= 0 ? 'up' : 'dn'}">${v >= 0 ? '▲' : '▼'} ${Math.abs(v).toLocaleString(undefined, { maximumFractionDigits: 1 })}%</span></span>`).join('') + tail;
   $('ticker').innerHTML = html + html; // doubled so the scroll loops seamlessly
 }
+renderTicker([['$SHIFT', 4200], ['$BRAINZ', 1337], ['$RUGGED', -99], ['$FROGZ', 690], ['$MOONBOX', 88], ['$KINO', 420], ['$DOGWIF', 69], ['$NACHT', -42], ['$TEDDY', -77], ['$WAGMI', 999], ['$GRAVE', 13], ['$PACKAPUNCH', 5000]], false);
+async function loadTrending() {
+  if (!(await useRelay())) return;
+  try { const d = await (await fetch('trending', { cache: 'no-store' })).json(); if (d.list && d.list.length) { renderTicker(d.list.map(c => ['$' + c.s, c.c]), true); boardCoins = d.list.map(c => ['$' + c.s, c.c]); boardCoins.live = true; } } catch (e) {}
+}
+loadTrending(); setInterval(loadTrending, 120000);
 loadLeaderboard();
 $('cast').innerHTML = CHAR_IDS.map(id => `<figure><img src="${portrait(id)}" alt=""><figcaption>${CHARACTERS[id].name}</figcaption></figure>`).join('');
 
@@ -3492,6 +3718,7 @@ function clientUpdate(dt) {
   if (powerShown) { screenT += dt; if (screenT > .08) { screenT = 0; drawScreen(t, true); } }
   for (const s of spinners) s.rotation.y += dt * 3 * s.userData.spin;
   for (const ps of portalSheets) ps.material.opacity = .45 + Math.sin(t * 2.5) * .15;
+  decoT -= dt; if (decoT <= 0) { decoT = .25; drawArcade(t); drawChart(t); drawBoard(t); }
 
   if (!state) return;
   const lerp = 1 - Math.exp(-dt * 12);

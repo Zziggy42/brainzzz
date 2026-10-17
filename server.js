@@ -25,6 +25,33 @@ function saveBoard() {
   const tmp = LB_FILE + '.tmp';
   fs.writeFile(tmp, JSON.stringify(board), err => { if (!err) fs.rename(tmp, LB_FILE, () => {}); });
 }
+// ---- live ticker: pump.fun coins trending on Solana, via GeckoTerminal's public API (cached, so players never hit it directly) ----
+const BLOCK = /NIG|FAG|RETARD|NAZI|HITLER|RAPE|KKK/i; // keep the worst names off the landing page
+let trend = { at: 0, list: [] };
+async function getTrending() {
+  if (Date.now() - trend.at < 60000) return trend;
+  trend.at = Date.now(); // one fetch per minute at most, even if it fails
+  try {
+    const out = [];
+    for (const page of [1, 2]) {
+      const r = await fetch(`https://api.geckoterminal.com/api/v2/networks/solana/trending_pools?page=${page}&include=base_token`, { headers: { accept: 'application/json' } });
+      if (!r.ok) break;
+      const d = await r.json(), toks = {};
+      for (const t of d.included || []) toks[t.id] = t.attributes || {};
+      for (const pool of d.data || []) {
+        const dex = pool.relationships && pool.relationships.dex && pool.relationships.dex.data && pool.relationships.dex.data.id;
+        if (dex !== 'pumpswap' && dex !== 'pump-fun') continue;
+        const tok = toks[pool.relationships.base_token && pool.relationships.base_token.data && pool.relationships.base_token.data.id] || {};
+        const sym = String(tok.symbol || '').replace(/[^A-Za-z0-9]/g, '').slice(0, 12).toUpperCase();
+        const chg = +(pool.attributes && pool.attributes.price_change_percentage && pool.attributes.price_change_percentage.h24);
+        if (!sym || !isFinite(chg) || BLOCK.test(sym) || out.some(o => o.s === sym)) continue;
+        out.push({ s: sym, c: Math.round(chg * 10) / 10 });
+      }
+    }
+    if (out.length) trend.list = out.slice(0, 24);
+  } catch (e) {}
+  return trend;
+}
 const lastPost = new Map();
 function addScore(body) {
   const players = (Array.isArray(body.players) ? body.players : []).slice(0, 8).map(p => ({
@@ -68,6 +95,11 @@ const server = http.createServer((req, res) => {
       try { out = addScore(JSON.parse(body)); } catch (e) { out = { error: 'bad json' }; }
       res.writeHead(out.error ? 400 : 200, { 'content-type': 'application/json', 'cache-control': 'no-store' });
       res.end(JSON.stringify(out));
+    });
+  } else if (pathname === '/trending') {
+    getTrending().then(t => {
+      res.writeHead(200, { 'content-type': 'application/json', 'cache-control': 'no-store' });
+      res.end(JSON.stringify({ list: t.list, at: t.at, source: 'GeckoTerminal (pump.fun pools on Solana)' }));
     });
   } else if (pathname === '/relay-ok') {
     // also tells the host page its public link (written by the launcher once the tunnel is up)
