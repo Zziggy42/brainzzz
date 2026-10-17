@@ -17,7 +17,9 @@ try { fs.mkdirSync(DATA_DIR, { recursive: true }); } catch (e) {}
 const LB_FILE = path.join(DATA_DIR, 'leaderboard.json');
 const MODES = ['solo', 'duo', 'squad'], KEEP = 100, CHARS = ['elon', 'trump', 'kitty', 'cz'];
 let board = { solo: [], duo: [], squad: [] };
-try { const saved = JSON.parse(fs.readFileSync(LB_FILE, 'utf8')); for (const m of MODES) if (Array.isArray(saved[m])) board[m] = saved[m]; } catch (e) {}
+// runs that ended in round 1 without a single kill aren't real runs (quits, tests) — keep them off the board
+const counts = e => e.round >= 2 || e.kills > 0;
+try { const saved = JSON.parse(fs.readFileSync(LB_FILE, 'utf8')); for (const m of MODES) if (Array.isArray(saved[m])) board[m] = saved[m].filter(counts); } catch (e) {}
 const rankOrder = (a, b) => b.round - a.round || b.kills - a.kills || a.at - b.at; // highest round, then most kills, then first to get there
 function saveBoard() {
   const tmp = LB_FILE + '.tmp';
@@ -29,10 +31,14 @@ function addScore(body) {
     n: String(p && p.n || 'Survivor').replace(/[<>&"\u0000-\u001f]/g, '').trim().slice(0, 14) || 'Survivor',
     ch: CHARS.includes(p && p.ch) ? p.ch : null,
     k: Math.max(0, Math.min(100000, Math.floor(+(p && p.k) || 0))),
+    left: p && +p.left >= 1 ? Math.min(999, Math.floor(+p.left)) : null, // round they left in, if they quit early
   }));
   const round = Math.floor(+body.round || 0), gid = String(body.gid || '').slice(0, 24);
   if (!players.length || round < 1 || round > 999 || !gid) return { error: 'bad score' };
-  const mode = players.length === 1 ? 'solo' : players.length === 2 ? 'duo' : 'squad';
+  // the mode the host picked (players who left mid-run still count toward its size)
+  const SIZE = { solo: 1, duo: 2, squad: 4 };
+  const mode = MODES.includes(body.mode) && players.length === SIZE[body.mode] ? body.mode : players.length === 1 ? 'solo' : players.length === 2 ? 'duo' : 'squad';
+  if (!counts({ round, kills: players.reduce((a, p) => a + p.k, 0) })) return { mode, rank: null, top: board[mode].slice(0, 5), skipped: true };
   const list = board[mode];
   if (list.some(e => e.gid === gid)) return { mode, rank: list.findIndex(e => e.gid === gid) + 1, top: list.slice(0, 5) };
   const entry = { gid, round, kills: players.reduce((a, p) => a + p.k, 0), players, at: Date.now() };
