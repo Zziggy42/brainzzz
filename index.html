@@ -1838,7 +1838,7 @@ function buildTheater() {
   for (const [x0, w] of [[10 * CELL, 5.5 * CELL], [24.5 * CELL, 5.5 * CELL]]) {
     const cu = new THREE.Mesh(new THREE.PlaneGeometry(w, TH), curtainMat); cu.position.set(x0 + w / 2, TH / 2, stageZ); world.add(cu);
   }
-  const sc = document.createElement('canvas'); sc.width = 160; sc.height = 90; screenCtx = sc.getContext('2d');
+  const sc = document.createElement('canvas'); sc.width = 320; sc.height = 180; screenCtx = sc.getContext('2d');
   screenTex = new THREE.CanvasTexture(sc); screenTex.magFilter = THREE.NearestFilter;
   drawScreen(0, false);
   const screen = new THREE.Mesh(new THREE.PlaneGeometry(9 * CELL, 5.2), new THREE.MeshBasicMaterial({ map: screenTex }));
@@ -2469,9 +2469,18 @@ function memeTex(kind, aspect) {
   }
   const t = new THREE.CanvasTexture(cv); t.magFilter = THREE.NearestFilter; return t;
 }
+// the theater screen: an old film countdown, then a live chart of the best-performing pump.fun coin
+let topChart = null;
+const COUNT_SECS = 8, CHART_SECS = 20;
 function drawScreen(t, on) {
-  const g = screenCtx, w = 160, h = 90;
-  if (!on) { g.fillStyle = '#1a1a1a'; g.fillRect(0, 0, w, h); screenTex.needsUpdate = true; return; }
+  const g = screenCtx;
+  g.setTransform(1, 0, 0, 1, 0, 0);
+  if (!on) { g.fillStyle = '#1a1a1a'; g.fillRect(0, 0, 320, 180); screenTex.needsUpdate = true; return; }
+  const cycle = topChart ? COUNT_SECS + CHART_SECS : COUNT_SECS, phase = t % cycle;
+  if (phase >= COUNT_SECS) return drawTopChart(phase - COUNT_SECS);
+  g.setTransform(2, 0, 0, 2, 0, 0); // the countdown is drawn on a 160x90 grid
+  const w = 160, h = 90;
+  t = phase;
   g.fillStyle = '#ddd6c4'; g.fillRect(0, 0, w, h);
   const n = 8 - (Math.floor(t) % 8);
   g.fillStyle = '#9a9384';
@@ -2482,6 +2491,36 @@ function drawScreen(t, on) {
   g.fillStyle = '#111'; g.font = 'bold 40px VT323, monospace'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(n, 80, 47);
   for (let i = 0; i < 60; i++) { g.fillStyle = Math.random() < .5 ? 'rgba(0,0,0,.35)' : 'rgba(255,255,255,.3)'; g.fillRect(Math.random() * w, Math.random() * h, 1, Math.random() * 4); }
   screenTex.needsUpdate = true;
+}
+function drawTopChart(p) {
+  const g = screenCtx, W = 320, H = 180, d = topChart, cs = d.candles;
+  g.fillStyle = '#05080a'; g.fillRect(0, 0, W, H);
+  // candles appear one by one, like a live feed
+  const shown = Math.max(2, Math.min(cs.length, Math.ceil(cs.length * Math.min(1, p / (CHART_SECS * .6)))));
+  const vis = cs.slice(0, shown), lo = Math.min(...cs.map(k => k[3])), hi = Math.max(...cs.map(k => k[2]));
+  const x0 = 14, x1 = W - 14, y0 = 52, y1 = H - 22, cw = (x1 - x0) / cs.length;
+  const Y = v => y1 - (v - lo) / ((hi - lo) || 1) * (y1 - y0);
+  g.strokeStyle = 'rgba(255,255,255,.07)'; g.lineWidth = 1;
+  for (let i = 0; i <= 4; i++) { const y = y0 + (y1 - y0) * i / 4; g.beginPath(); g.moveTo(x0, y); g.lineTo(x1, y); g.stroke(); }
+  vis.forEach(([, o, hgh, l, c], i) => {
+    const x = x0 + i * cw, up = c >= o, col = up ? '#3ade80' : '#f05252';
+    g.fillStyle = col; g.fillRect(x + cw / 2 - .5, Y(hgh), 1, Math.max(1, Y(l) - Y(hgh)));
+    const top = Y(Math.max(o, c)); g.fillRect(x + 1, top, Math.max(1, cw - 2), Math.max(1, Y(Math.min(o, c)) - top));
+  });
+  const last = vis[vis.length - 1], ly = Y(last[4]);
+  g.strokeStyle = 'rgba(255,211,106,.6)'; g.setLineDash([3, 3]); g.beginPath(); g.moveTo(x0, ly); g.lineTo(x1, ly); g.stroke(); g.setLineDash([]);
+  if (Math.sin(p * 8) > 0) { g.fillStyle = '#ffd36a'; g.fillRect(x0 + (vis.length - 1) * cw + cw / 2 - 2, ly - 2, 4, 4); }
+  g.textBaseline = 'alphabetic'; g.textAlign = 'left'; g.font = '22px VT323, monospace';
+  g.fillStyle = '#e9e4da'; g.fillText('$' + d.s, 14, 26);
+  g.fillStyle = d.c >= 0 ? '#3ade80' : '#f05252'; g.fillText(`${d.c >= 0 ? '▲' : '▼'} ${Math.abs(d.c).toLocaleString(undefined, { maximumFractionDigits: 1 })}% 24H`, 14 + g.measureText('$' + d.s + '  ').width, 26);
+  g.font = '16px VT323, monospace'; g.fillStyle = '#ff4fa8'; g.fillText('● LIVE · TOP PUMP.FUN COIN · 5M CANDLES', 14, 42);
+  g.textAlign = 'right'; g.fillStyle = 'rgba(233,228,218,.55)'; g.fillText('DATA: GECKOTERMINAL · NOT FINANCIAL ADVICE', W - 14, H - 6);
+  for (let i = 0; i < 40; i++) { g.fillStyle = 'rgba(255,255,255,.06)'; g.fillRect(Math.random() * W, Math.random() * H, 1, Math.random() * 6); } // a little film grain
+  screenTex.needsUpdate = true;
+}
+async function loadTopChart() {
+  if (!(await useRelay())) return;
+  try { const d = await (await fetch('topchart', { cache: 'no-store' })).json(); if (d && d.s && Array.isArray(d.candles) && d.candles.length > 3) topChart = d; } catch (e) {}
 }
 let powerShown = false, boxShown = -1;
 function applyPower() {
@@ -3643,6 +3682,7 @@ async function loadTrending() {
   try { const d = await (await fetch('trending', { cache: 'no-store' })).json(); if (d.list && d.list.length) { renderTicker(d.list.map(c => ['$' + c.s, c.c]), true); boardCoins = d.list.map(c => ['$' + c.s, c.c]); boardCoins.live = true; } } catch (e) {}
 }
 loadTrending(); setInterval(loadTrending, 120000);
+loadTopChart(); setInterval(loadTopChart, 120000);
 // contract address bar (set TOKEN_CA on the server; shows "coming soon" until then)
 async function loadCA() {
   if (!(await useRelay())) return;

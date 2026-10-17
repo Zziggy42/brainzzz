@@ -28,9 +28,15 @@ function saveBoard() {
 // ---- live ticker: pump.fun coins trending on Solana, via GeckoTerminal's public API (cached, so players never hit it directly) ----
 const BLOCK = /NIG|FAG|RETARD|NAZI|HITLER|RAPE|KKK/i; // keep the worst names off the landing page
 let trend = { at: 0, list: [] };
-async function getTrending() {
-  if (Date.now() - trend.at < 60000) return trend;
-  trend.at = Date.now(); // one fetch per minute at most, even if it fails
+let trendFetch = null;
+function getTrending() {
+  if (trendFetch) return trendFetch;                      // a fetch is already running: wait for it
+  if (Date.now() - trend.at < 60000) return Promise.resolve(trend);
+  trend.at = Date.now();                                  // one fetch per minute at most, even if it fails
+  trendFetch = fetchTrending().finally(() => { trendFetch = null; });
+  return trendFetch;
+}
+async function fetchTrending() {
   try {
     const out = [];
     for (const page of [1, 2]) {
@@ -45,12 +51,37 @@ async function getTrending() {
         const sym = String(tok.symbol || '').replace(/[^A-Za-z0-9]/g, '').slice(0, 12).toUpperCase();
         const chg = +(pool.attributes && pool.attributes.price_change_percentage && pool.attributes.price_change_percentage.h24);
         if (!sym || !isFinite(chg) || BLOCK.test(sym) || out.some(o => o.s === sym)) continue;
-        out.push({ s: sym, c: Math.round(chg * 10) / 10 });
+        const addr = String(pool.attributes && pool.attributes.address || '');
+        out.push({ s: sym, c: Math.round(chg * 10) / 10, pool: /^[1-9A-HJ-NP-Za-km-z]{32,48}$/.test(addr) ? addr : null });
       }
     }
     if (out.length) trend.list = out.slice(0, 24);
   } catch (e) {}
   return trend;
+}
+// ---- the theater screen's chart: 5-minute candles for the best 24h performer on the trending list ----
+let top = { at: 0, data: null }, topFetch = null;
+function getTopChart() {
+  if (topFetch) return topFetch;
+  if (Date.now() - top.at < 120000) return Promise.resolve(top.data);
+  top.at = Date.now();
+  topFetch = fetchTopChart().finally(() => { topFetch = null; });
+  return topFetch;
+}
+async function fetchTopChart() {
+  try {
+    const t = await getTrending();
+    const best = t.list.filter(c => c.pool).sort((a, b) => b.c - a.c)[0];
+    if (best) {
+      const r = await fetch(`https://api.geckoterminal.com/api/v2/networks/solana/pools/${best.pool}/ohlcv/minute?aggregate=5&limit=48&currency=usd`, { headers: { accept: 'application/json' } });
+      if (r.ok) {
+        const list = (((await r.json()).data || {}).attributes || {}).ohlcv_list || [];
+        const candles = list.map(k => k.slice(0, 5).map(Number)).filter(k => k.every(isFinite)).reverse(); // oldest first
+        if (candles.length > 3) top.data = { s: best.s, c: best.c, candles };
+      }
+    }
+  } catch (e) {}
+  return top.data;
 }
 const lastPost = new Map();
 function addScore(body) {
@@ -101,10 +132,15 @@ const server = http.createServer((req, res) => {
     const ca = String(process.env.TOKEN_CA || '').trim(), url = String(process.env.TOKEN_URL || '').trim();
     res.writeHead(200, { 'content-type': 'application/json', 'cache-control': 'no-store' });
     res.end(JSON.stringify({ ca: /^[1-9A-HJ-NP-Za-km-z]{32,48}$/.test(ca) ? ca : null, url: /^https:\/\/[^\s"<>]+$/.test(url) ? url : null }));
+  } else if (pathname === '/topchart') {
+    getTopChart().then(d => {
+      res.writeHead(200, { 'content-type': 'application/json', 'cache-control': 'no-store' });
+      res.end(JSON.stringify(d || {}));
+    });
   } else if (pathname === '/trending') {
     getTrending().then(t => {
       res.writeHead(200, { 'content-type': 'application/json', 'cache-control': 'no-store' });
-      res.end(JSON.stringify({ list: t.list, at: t.at, source: 'GeckoTerminal (pump.fun pools on Solana)' }));
+      res.end(JSON.stringify({ list: t.list.map(({ s, c }) => ({ s, c })), at: t.at, source: 'GeckoTerminal (pump.fun pools on Solana)' }));
     });
   } else if (pathname === '/relay-ok') {
     // also tells the host page its public link (written by the launcher once the tunnel is up)
