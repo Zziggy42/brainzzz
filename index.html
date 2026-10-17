@@ -45,6 +45,15 @@
   .share button { font-size:14px; padding:8px 14px; white-space:nowrap; }
   .side { display:flex; flex-direction:column; gap:26px; padding-top:clamp(0px, 4vh, 40px); }
   .side h2 { margin:0 0 10px; font-family:VT323, monospace; font-weight:400; font-size:22px; letter-spacing:3px; text-transform:uppercase; color:#d9c9a8; }
+  .modes { display:grid; grid-template-columns:repeat(3, 1fr); gap:6px; }
+  .modes button { display:flex; flex-direction:column; align-items:center; gap:2px; padding:8px 4px; font-size:15px; background:#0d0a0a; border:1px solid #3a2a26; color:var(--ink); }
+  .modes button small { font-size:11px; color:var(--dim); letter-spacing:1px; text-transform:none; }
+  .modes button.on { background:var(--red); border-color:var(--red); } .modes button.on small { color:#fdd; }
+  .modes button:disabled { cursor:default; filter:none; }
+  .modes button:disabled:not(.on) { opacity:.45; }
+  #modeInfo { font-size:14px; color:var(--dim); text-align:center; }
+  #modeInfo.ready { color:#8f8; }
+  #startBtn:disabled { opacity:.45; cursor:not-allowed; filter:none; }
   .lbtabs { display:flex; gap:6px; margin-bottom:8px; }
   .lbtabs button { font-size:13px; padding:6px 14px; background:rgba(16,11,11,.8); border:1px solid #3a2a26; color:var(--dim); letter-spacing:2px; }
   .lbtabs button.on { background:var(--red); border-color:var(--red); color:#fff; }
@@ -58,6 +67,8 @@
   table.lb td.rd { font-family:Creepster, cursive; font-size:22px; color:var(--red); width:52px; }
   table.lb td.who img { width:18px; height:18px; image-rendering:pixelated; vertical-align:-4px; margin-right:4px; }
   table.lb td.who span { margin-right:10px; white-space:nowrap; }
+  table.lb td.who small { color:var(--dim); font-size:11px; }
+  table.lb td.who span.gone { opacity:.55; }
   table.lb td.when { color:var(--dim); font-size:12px; white-space:nowrap; }
   table.lb tr.mine td { background:rgba(176,20,26,.22); }
   .lbempty { padding:14px; color:var(--dim); font-size:14px; }
@@ -274,6 +285,13 @@
           <input id="shareLink" readonly aria-label="Invite link">
           <button id="copyBtn" class="ghost">Copy link</button>
         </div>
+        <label>Mode</label>
+        <div class="modes" id="modeRow" role="radiogroup" aria-label="Game mode">
+          <button data-mode="solo" role="radio">Solo<small>1 player</small></button>
+          <button data-mode="duo" role="radio">Duo<small>2 players</small></button>
+          <button data-mode="squad" role="radio">Squad<small>4 players</small></button>
+        </div>
+        <div id="modeInfo"></div>
         <label>Choose your survivor</label>
         <div id="charGrid"></div>
         <label>In the lobby</label>
@@ -765,6 +783,7 @@ function joinRelay(code) {
   status('Connecting…');
   net.code = code;
   const ws = new WebSocket(RELAY_URL + '?join=' + code);
+  net.closeConn = () => ws.close();
   ws.onmessage = e => {
     const d = JSON.parse(e.data);
     if (d.err === 'noroom') return status('Room ' + code + ' not found. Check the code, and make sure you both opened the same link.');
@@ -808,7 +827,7 @@ async function joinGame(code) {
   net.peer = peer; net.code = code;
   peer.on('open', () => {
     const conn = peer.connect('deadshift-' + code.toLowerCase(), { reliable: true, serialization: 'json' });
-    net.hostConn = conn;
+    net.hostConn = conn; net.closeConn = () => conn.close();
     conn.on('open', () => conn.send({ t: 'hello', name: myName }));
     conn.on('data', clientOnMsg);
     conn.on('close', hostLost);
@@ -837,6 +856,7 @@ function initHost() {
     box: null, boxLoc: LOBBY_BOX, boxUses: 0, boxMove: 0,
     activeSpawns: [], power: false, linked: false, tpCool: 0, papT: 0,
     traps: TRAPS.map(() => ({ on: 0, cd: 0, tick: 0 })),
+    mode: host ? host.mode : 'duo', startMode: null, departed: [],
     special: null, nextDog: 5, nextBoss: 10, bossT: 0, dogHp: 0, fireSale: 0,
     partSpot: PART_LIST.map(pt => Math.floor(Math.random() * pt.spots.length)), partTaken: PART_LIST.map(() => false),
     built: { shield: false, cannon: false }, cannonTaken: false,
@@ -877,7 +897,9 @@ function spawnPos(i) {
   const [x, z] = cellCenter(c, r);
   return [x + ((i >> 1) % 3 - 1) * 0.9, z];
 }
+const MODE_NAME = { solo: 'Solo', duo: 'Duo', squad: 'Squad' };
 const playerList = () => Object.values(host.players);
+const MODE_SIZE = { solo: 1, duo: 2, squad: 4 };
 const alivePlayers = () => playerList().filter(p => p.sp && !p.down && !p.dead);
 function freeCharacter() {
   const used = new Set(playerList().map(p => p.ch));
@@ -892,6 +914,9 @@ function hostHandle(pid, m) {
   switch (m.t) {
     case 'hello': {
       if (p) return;
+      // rooms are closed once a game starts, and only take as many players as the mode needs
+      if (pid !== 'H' && host.started) return sendTo(pid, { t: 'reject', reason: 'That game has already started. Ask the host to start a new one.' });
+      if (pid !== 'H' && playerList().length >= MODE_SIZE[host.mode]) return sendTo(pid, { t: 'reject', reason: `That lobby is full (${MODE_NAME[host.mode]} is ${MODE_SIZE[host.mode]} player${MODE_SIZE[host.mode] > 1 ? 's' : ''}).` });
       const idx = host.order++;
       const [x, z] = spawnPos(idx);
       host.players[pid] = {
@@ -965,8 +990,13 @@ function hostHandle(pid, m) {
       p.sp = true; p.hp = BASE_HP;
       feedAll(p.name + ' spawned in as ' + CHARACTERS[p.ch].name);
       break;
+    case 'mode':
+      if (pid === 'H' && !host.started && MODE_SIZE[m.mode]) host.mode = m.mode;
+      break;
     case 'start':
       if (pid === 'H' && !host.started) {
+        if (playerList().length !== MODE_SIZE[host.mode]) return msgTo(p, `${MODE_NAME[host.mode]} needs exactly ${MODE_SIZE[host.mode]} player${MODE_SIZE[host.mode] > 1 ? 's' : ''}`);
+        host.startMode = host.mode;
         for (const q of playerList()) if (!q.ch) q.ch = freeCharacter();
         host.started = true; host.inter = 5; broadcast(ev('start'));
       }
@@ -979,9 +1009,11 @@ function hostHandle(pid, m) {
 function hostDrop(pid) {
   delete net.conns[pid];
   if (!host || !host.players[pid]) return;
-  const name = host.players[pid].name;
+  const p = host.players[pid];
   delete host.players[pid];
-  feedAll(name + ' left');
+  // mid-game leavers keep their own kills on the run, marked with the round they left
+  if (host.started && !host.over && p.sp) host.departed.push({ n: p.name, ch: p.ch, k: p.kills, left: host.round, col: p.col, heads: p.heads, revives: p.revives, downs: p.downs, pts: p.pts });
+  feedAll(p.name + (host.started && !host.over ? ' left the game — keep fighting!' : ' left'), host.started ? '#f88' : undefined);
 }
 function msgTo(p, text) { sendTo(p.id, ev('msg', { text })); }
 function lineClear(x0, z0, x1, z1) {
@@ -1384,8 +1416,11 @@ function hostTick(dt) {
     const inGame = players.filter(p => p.sp);
     if (H.round > 0 && inGame.length && inGame.every(p => (p.down && !(p.autoRev > 0)) || p.dead)) {
       H.over = true;
-      broadcast(ev('over', { round: H.round, stats: players.map(p => [p.name, p.col, p.kills, p.heads, p.revives, p.downs, p.pts]) }));
-      submitScore({ gid: Math.random().toString(36).slice(2, 12) + Date.now().toString(36), round: H.round, players: inGame.map(p => ({ n: p.name, ch: p.ch, k: p.kills })) });
+      const stats = players.map(p => [p.name, p.col, p.kills, p.heads, p.revives, p.downs, p.pts, null])
+        .concat(H.departed.map(d => [d.n, d.col, d.k, d.heads, d.revives, d.downs, d.pts, d.left]));
+      broadcast(ev('over', { round: H.round, mode: H.startMode, stats }));
+      submitScore({ gid: Math.random().toString(36).slice(2, 12) + Date.now().toString(36), round: H.round, mode: H.startMode,
+        players: inGame.map(p => ({ n: p.name, ch: p.ch, k: p.kills, left: null })).concat(H.departed.map(d => ({ n: d.n, ch: d.ch, k: d.k, left: d.left }))) });
     }
   }
 
@@ -1401,6 +1436,7 @@ function hostTick(dt) {
       bd: [H.built.shield ? 1 : 0, H.built.cannon ? (H.cannonTaken ? 2 : 1) : 0],
       bh: H.zombies.filter(z => z.k === 'boss').reduce((a, z) => Math.max(a, +(z.hp / z.max).toFixed(3)), 0),
       zs: H.zombies.map(z => [z.id, +z.x.toFixed(2), +z.z.toFixed(2), +z.yaw.toFixed(2), z.rise > 0 ? 1 : 0, z.run, z.attacking ? 1 : 0, z.k === 'dog' ? 1 : z.k === 'boss' ? 2 : 0]),
+      md: H.mode, sm: H.startMode,
       ps: players.map(p => ({ id: p.id, n: p.name, c: p.col, ch: p.ch, sp: p.sp ? 1 : 0, x: +p.x.toFixed(2), y: +p.y.toFixed(2), z: +p.z.toFixed(2), yaw: +p.yaw.toFixed(3), pi: +p.pitch.toFixed(3),
         hp: Math.round(p.hp), mh: maxHp(p), pts: p.pts, dn: p.down ? 1 : 0, dd: p.dead ? 1 : 0, bl: +p.bleed.toFixed(1), rv: +(p.rev / 3).toFixed(2), w: p.w, f: p.f, pk: p.perks.join(''), sh: Math.round(p.shield), sn: p.shieldN })),
       dr: H.drops.map(d => [d.id, d.k, +d.x.toFixed(2), +d.z.toFixed(2), +d.t.toFixed(1)]),
@@ -1409,7 +1445,10 @@ function hostTick(dt) {
 }
 function hostRestart() {
   const keepPlayers = playerList();
+  if (keepPlayers.length !== MODE_SIZE[host.startMode]) return msgTo(host.players.H, `Not enough players left for a new ${MODE_NAME[host.startMode]} run — refresh and host a new game`);
+  const mode = host.startMode;
   initHost();
+  host.mode = host.startMode = mode;
   host.started = true; host.inter = 5;
   keepPlayers.forEach((p, i) => {
     const [x, z] = spawnPos(i);
@@ -2354,6 +2393,9 @@ function equip() { buildViewModel(curW()); me.reloadT = 0; me.nextFire = now() +
 
 function clientOnMsg(m) {
   switch (m.t) {
+    case 'reject':
+      status(m.reason); joined = false; if (net.closeConn) net.closeConn();
+      return;
     case 'welcome':
       net.myId = m.id; joined = true;
       doorsOpen = {}; for (const d of m.doors) doorsOpen[d] = true;
@@ -2391,7 +2433,7 @@ function onState(m) {
   }
   if (mine && mine.ch !== myChar) { myChar = mine.ch; if (gameStarted) equip(); }
   if (!gameStarted) {
-    renderCharGrid(m.ps);
+    renderCharGrid(m.ps); renderModes(m);
     $('lobbyList').innerHTML = m.ps.map(p => `<div style="border-color:${p.c}">${esc(p.n)}${p.id === 'H' ? ' <span style="color:var(--dim)">(host)</span>' : ''}</div>`).join('');
   }
 }
@@ -2953,7 +2995,7 @@ function updateHUD() {
   });
 }
 // ---------- leaderboard ----------
-const MODE_NAME = { solo: 'Solo', duo: 'Duos', squad: 'Squads' };
+
 let lbData = null, lbMode = 'solo';
 async function submitScore(entry) {
   if (!(await useRelay())) return broadcast(ev('ranked', { offline: true }));
@@ -2968,7 +3010,7 @@ function lbTable(rows, mineGid) {
   if (!rows || !rows.length) return '<div class="lbempty">No runs yet — be the first on the board.</div>';
   return '<table class="lb"><tr><th>#</th><th>Round</th><th>Survivors</th><th>Kills</th><th>When</th></tr>' + rows.map((e, i) =>
     `<tr class="${i < 3 ? 'g' + (i + 1) : ''} ${e.gid === mineGid ? 'mine' : ''}"><td class="rk">${i + 1}</td><td class="rd">${e.round}</td>
-      <td class="who">${e.players.map(p => `<span>${p.ch ? `<img src="${portrait(p.ch)}" alt="">` : ''}${esc(p.n)}</span>`).join('')}</td>
+      <td class="who">${e.players.map(p => `<span${p.left ? ' class="gone" title="Left in round ' + p.left + '"' : ''}>${p.ch ? `<img src="${portrait(p.ch)}" alt="">` : ''}${esc(p.n)} <small>${p.k}</small>${p.left ? ` <small>· left r${p.left}</small>` : ''}</span>`).join('')}</td>
       <td>${e.kills}</td><td class="when">${ago(e.at)}</td></tr>`).join('') + '</table>';
 }
 function renderLanding() {
@@ -2999,13 +3041,24 @@ function showGameOver(m) {
   $('over').classList.remove('hidden'); $('pause').classList.add('hidden');
   $('overSub').textContent = `Your team survived ${m.round} round${m.round === 1 ? '' : 's'}`;
   $('overStats').innerHTML = '<tr><th>Survivor</th><th>Kills</th><th>Headshots</th><th>Revives</th><th>Downs</th><th>Points</th></tr>' +
-    m.stats.map(s => `<tr><td style="color:${s[1]}">${esc(s[0])}</td><td>${s[2]}</td><td>${s[3]}</td><td>${s[4]}</td><td>${s[5]}</td><td>${s[6]}</td></tr>`).join('');
+    m.stats.map(s => `<tr${s[7] ? ' style="opacity:.6"' : ''}><td style="color:${s[1]}">${esc(s[0])}${s[7] ? ` <small style="color:var(--dim)">(left in round ${s[7]})</small>` : ''}</td><td>${s[2]}</td><td>${s[3]}</td><td>${s[4]}</td><td>${s[5]}</td><td>${s[6]}</td></tr>`).join('');
   $('againBtn').classList.toggle('hidden', !net.isHost);
   $('overWait').classList.toggle('hidden', net.isHost);
   sTone([110, 104, 98, 82], 1.6, 'sawtooth', .12, .4);
 }
 
 // ---------- menus ----------
+function renderModes(m) {
+  const need = MODE_SIZE[m.md], have = m.ps.length;
+  document.querySelectorAll('#modeRow button').forEach(b => { b.classList.toggle('on', b.dataset.mode === m.md); b.disabled = !net.isHost; b.setAttribute('aria-checked', b.dataset.mode === m.md); });
+  const ready = have === need;
+  $('modeInfo').className = ready ? 'ready' : '';
+  $('modeInfo').textContent = ready ? `${MODE_NAME[m.md]} — ${have}/${need} players, ready to start` :
+    have > need ? `${MODE_NAME[m.md]} is ${need} player${need > 1 ? 's' : ''} — too many in the lobby` : `${MODE_NAME[m.md]} — ${have}/${need} players, waiting for ${need - have} more`;
+  $('startBtn').disabled = !ready;
+  $('startBtn').textContent = ready ? 'Start game' : have > need ? 'Too many players' : `Waiting for ${need - have} more`;
+}
+$('modeRow').addEventListener('click', e => { const b = e.target.closest('button'); if (b && net.isHost) { sendToHost({ t: 'mode', mode: b.dataset.mode }); sClick(); } });
 function showLobby() {
   $('startPanel').classList.add('hidden'); $('lobbyPanel').classList.remove('hidden');
   $('lobbyCode').textContent = net.code;
@@ -3068,7 +3121,7 @@ $('sens').addEventListener('input', () => { sens = +$('sens').value; try { local
 $('hostBtn').onclick = () => { initAudio(); readName(); hostGame(); };
 $('joinBtn').onclick = () => { initAudio(); readName(); joinGame($('joinCode').value); };
 $('joinCode').addEventListener('keydown', e => { if (e.key === 'Enter') $('joinBtn').click(); });
-$('startBtn').onclick = () => { sendToHost({ t: 'start' }); requestLock(); };
+$('startBtn').onclick = () => { if ($('startBtn').disabled) return; sendToHost({ t: 'start' }); requestLock(); };
 $('againBtn').onclick = () => sendToHost({ t: 'restart' });
 $('copyBtn').onclick = () => {
   const el = $('shareLink'), done = () => { $('copyBtn').textContent = 'Copied'; setTimeout(() => $('copyBtn').textContent = 'Copy link', 1500); };
