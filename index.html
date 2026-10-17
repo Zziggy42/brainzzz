@@ -314,9 +314,9 @@
   <div class="ticker" aria-hidden="true"><div class="tk" id="ticker"></div></div>
   <div class="cabar" id="cabar">
     <span class="calabel">CA:</span>
-    <code id="caText">coming soon</code>
-    <button id="caCopy" class="ghost hidden" aria-label="Copy contract address">Copy</button>
-    <a id="caLink" class="hidden" target="_blank" rel="noopener noreferrer">View chart ↗</a>
+    <code id="caText">5YbhmVJeWNeQSxJTNyruHzjuiYQirK6GwXVAjhYVpump</code>
+    <button id="caCopy" class="ghost" aria-label="Copy contract address">Copy</button>
+    <a id="caLink" href="https://pump.fun/coin/5YbhmVJeWNeQSxJTNyruHzjuiYQirK6GwXVAjhYVpump" target="_blank" rel="noopener noreferrer">View chart ↗</a>
   </div>
   <div class="land">
     <section class="hero">
@@ -3898,16 +3898,18 @@ async function loadTrending() {
 }
 loadTrending(); setInterval(loadTrending, 120000);
 loadTopChart(); setInterval(loadTopChart, 120000);
-// contract address bar (set TOKEN_CA on the server; shows "coming soon" until then)
-async function loadCA() {
-  if (!(await useRelay())) return;
-  try {
-    const d = await (await fetch('config', { cache: 'no-store' })).json();
-    if (d.ca) { $('caText').textContent = d.ca; $('caText').classList.remove('soon'); $('caCopy').classList.remove('hidden'); }
-    if (d.url) { $('caLink').href = d.url; $('caLink').classList.remove('hidden'); }
-  } catch (e) {}
+// contract address bar: LAUNCH_CA below, or TOKEN_CA on the server (server wins); shows "coming soon" until either is set
+const LAUNCH_CA = '5YbhmVJeWNeQSxJTNyruHzjuiYQirK6GwXVAjhYVpump', LAUNCH_URL = '';
+function showCA(ca, url) {
+  if (/^[1-9A-HJ-NP-Za-km-z]{32,48}$/.test(ca || '')) { $('caText').textContent = ca; $('caText').classList.remove('soon'); $('caCopy').classList.remove('hidden'); }
+  if (/^https:\/\/[^\s"<>]+$/.test(url || '')) { $('caLink').href = url; $('caLink').classList.remove('hidden'); }
 }
-$('caText').classList.add('soon'); loadCA();
+async function loadCA() {
+  showCA(LAUNCH_CA, LAUNCH_URL || (LAUNCH_CA && 'https://pump.fun/coin/' + LAUNCH_CA));
+  if (!(await useRelay())) return;
+  try { const d = await (await fetch('config', { cache: 'no-store' })).json(); showCA(d.ca, d.url || (d.ca && 'https://pump.fun/coin/' + d.ca)); } catch (e) {}
+}
+if (!LAUNCH_CA) $('caText').classList.add('soon'); loadCA();
 $('caCopy').onclick = () => {
   const t = $('caText').textContent, done = () => { $('caCopy').textContent = 'Copied'; setTimeout(() => $('caCopy').textContent = 'Copy', 1500); };
   const fallback = () => { const r = document.createRange(); r.selectNodeContents($('caText')); const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r); try { document.execCommand('copy'); done(); } catch (e) {} };
