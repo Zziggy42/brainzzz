@@ -1,0 +1,12 @@
+{
+  "name": "dead-shift",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Co-op blocky zombie survival in the browser",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
