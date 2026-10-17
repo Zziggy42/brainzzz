@@ -207,6 +207,51 @@
   #feed { position:absolute; left:20px; top:240px; font-size:15px; display:flex; flex-direction:column; gap:3px; max-width:360px; }
   #feed div { text-shadow:0 1px 3px #000; animation:fade 6s forwards; }
   @keyframes fade { 0%,80% { opacity:1; } 100% { opacity:0; } }
+  #coinHud { position:absolute; right:20px; top:34px; font-family:VT323, monospace; font-size:18px; background:rgba(0,0,0,.5); border:1px solid #2a4a3a; padding:2px 10px; display:flex; gap:8px; align-items:center; }
+  #coinHud img { width:18px; height:18px; image-rendering:pixelated; }
+  #coinHud .up { color:#3ade80; } #coinHud .dn { color:#f05252; }
+  body.touch #coinHud { right:auto; left:50%; transform:translateX(-50%); top:96px; font-size:14px; }
+  #term { background:rgba(5,4,6,.82); z-index:25; overflow-y:auto; display:block; padding:24px 16px; }
+  .tpanel { max-width:1040px; margin:0 auto; background:#121214; border:1px solid #2a2a30; color:#e6e6ea; font-family:system-ui, -apple-system, Segoe UI, sans-serif; }
+  .thead { display:flex; justify-content:space-between; align-items:center; padding:10px 16px; border-bottom:1px solid #2a2a30; font-family:VT323, monospace; font-size:20px; color:#3affb0; letter-spacing:1px; }
+  .thead button { font-size:13px; padding:6px 12px; font-family:system-ui, sans-serif; }
+  .tgrid { display:grid; grid-template-columns:minmax(0, 1fr) 260px; gap:20px; padding:20px; }
+  .tmain { display:flex; flex-direction:column; gap:12px; min-width:0; }
+  .tmain h3 { margin:0; font-size:20px; font-weight:600; }
+  .tsec { font-size:14px; font-weight:600; color:#e6e6ea; }
+  .tsub { margin:-6px 0 0; font-size:13px; color:#9a9aa6; }
+  .tbox { border:1px solid #2a2a30; background:#18181c; padding:16px; display:flex; flex-direction:column; gap:12px; }
+  .trow { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .tpanel label { display:flex; flex-direction:column; gap:6px; font-size:13px; font-weight:500; color:#d8d8de; text-transform:none; letter-spacing:0; }
+  .tpanel label i, .tpanel summary i { color:#8a8a96; font-style:normal; font-weight:400; }
+  .tpanel input, .tpanel textarea { background:#0f0f12; border:1px solid #2e2e36; color:#f0f0f4; font:inherit; font-size:15px; padding:10px 12px; border-radius:6px; resize:vertical; }
+  .tpanel input:focus, .tpanel textarea:focus { border-color:#3affb0; outline:none; }
+  .tpanel details summary { cursor:pointer; font-size:13px; color:#d8d8de; margin-bottom:8px; }
+  .tpair { display:flex; gap:8px; }
+  .tpair button { background:#0f0f12; border:1px solid #2e2e36; color:#d8d8de; font-family:system-ui, sans-serif; font-size:14px; letter-spacing:0; text-transform:none; padding:10px 22px; border-radius:6px; }
+  .tpair button.on { border-color:#3affb0; background:#123024; color:#fff; }
+  .tdrop { border:1px dashed #3a3a44; background:#141418; padding:28px 16px; display:flex; flex-direction:column; align-items:center; gap:6px; text-align:center; color:#b8b8c4; font-size:14px; }
+  .tdrop.over { border-color:#3affb0; }
+  .tdrop .ticon { font-size:34px; color:#6a6a76; }
+  .tdrop button, #tCreate { background:#7ef0a8; color:#0c1a12; font-family:system-ui, sans-serif; font-weight:600; letter-spacing:0; text-transform:none; font-size:15px; padding:10px 18px; border-radius:6px; }
+  #tCreate { align-self:flex-start; padding:12px 22px; }
+  #tCreate:disabled { opacity:.5; cursor:wait; }
+  #tErr { color:#ff7070; font-size:14px; min-height:0; }
+  #tErr:empty { display:none; }
+  .tnote { font-size:12px; color:#8a8a96; margin:0; line-height:1.5; }
+  .tprev { display:flex; flex-direction:column; gap:10px; }
+  .tcard { border:1px solid #2a2a30; background:#18181c; padding:14px; display:flex; flex-direction:column; gap:6px; overflow-wrap:anywhere; }
+  .pimg { width:100%; aspect-ratio:1; background:#0f0f12; display:grid; place-items:center; text-align:center; font-size:13px; color:#7a7a86; padding:12px; background-size:cover; background-position:center; image-rendering:pixelated; }
+  .pimg.small { width:64px; height:64px; padding:0; flex:none; }
+  #pTicker, #lTicker { color:#3affb0; font-family:VT323, monospace; font-size:20px; }
+  #pDesc { margin:0; font-size:13px; color:#a8a8b4; }
+  #termLive { padding:20px; display:flex; flex-direction:column; gap:14px; }
+  .tlhead { display:flex; gap:14px; align-items:center; } .tlhead b { font-size:22px; }
+  .tlstats { display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:10px; }
+  .tlstats div { background:#18181c; border:1px solid #2a2a30; padding:10px; display:flex; flex-direction:column; gap:2px; }
+  .tlstats small { color:#8a8a96; font-size:12px; } .tlstats b { font-family:VT323, monospace; font-size:24px; font-weight:400; font-variant-numeric:tabular-nums; }
+  #lChart { width:100%; height:auto; background:#08090b; border:1px solid #2a2a30; }
+  @media (max-width:760px) { .tgrid { grid-template-columns:1fr; } .trow { grid-template-columns:1fr; } .tlstats { grid-template-columns:repeat(2, 1fr); } }
   #code { position:absolute; right:20px; top:14px; color:var(--dim); font-size:13px; letter-spacing:2px; }
   #downUI { position:absolute; left:50%; top:30%; transform:translateX(-50%); text-align:center; }
   #downUI .big { font-family:Creepster, cursive; font-size:54px; color:#f33; }
@@ -380,6 +425,7 @@
   <div id="miniWrap"><canvas id="mini" width="190" height="190"></canvas><div id="roomName"></div></div>
   <div id="feed"></div>
   <div id="code"></div>
+  <div id="coinHud" class="hidden"></div>
   <div id="announce"></div>
   <div id="perks"></div>
   <div id="builds"></div>
@@ -414,6 +460,45 @@
   <h2>Click to play</h2>
   <div style="color:var(--dim)">The horde doesn't pause. Press Esc to free your mouse.</div>
   <button id="leaveBtn" class="ghost" style="margin-top:22px">Leave to main menu</button>
+</div>
+
+<div id="term" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="termTitle">
+  <div class="tpanel">
+    <div class="thead"><span>LAUNCH TERMINAL · DEAD SHIFT CHAIN</span><button id="termClose" class="ghost">Close (Esc)</button></div>
+    <div id="termForm" class="tgrid">
+      <div class="tmain">
+        <h3 id="termTitle">Create new coin</h3>
+        <div class="tsec">Coin details</div><p class="tsub">Choose carefully — these can't be changed once the coin is created.</p>
+        <div class="tbox">
+          <div class="trow">
+            <label>Coin name<input id="tName" maxlength="32" placeholder="Name your coin" autocomplete="off"></label>
+            <label>Ticker<input id="tTicker" maxlength="10" placeholder="Add a coin ticker (e.g. BRAINZ)" autocomplete="off"></label>
+          </div>
+          <label>Description <i>(optional)</i><textarea id="tDesc" maxlength="200" rows="3" placeholder="Write a short description"></textarea></label>
+          <details><summary>Add social links <i>(optional)</i></summary><div class="trow"><input id="tX" maxlength="40" placeholder="X handle"><input id="tWeb" maxlength="60" placeholder="Website"></div></details>
+          <div class="tsec">Pool liquidity pair</div>
+          <div class="tpair" id="tPair"><button data-pair="SOL" class="on">◎ SOL</button><button data-pair="USDC">$ USDC</button></div>
+        </div>
+        <div class="tdrop" id="tDrop">
+          <div class="ticon">▣</div><b>Select an image to upload</b><span>or drag and drop it here</span>
+          <button id="tPick">Select file</button><input type="file" id="tFile" accept="image/png,image/jpeg,image/gif,image/webp" hidden>
+        </div>
+        <div id="tErr" role="alert"></div>
+        <button id="tCreate">Create coin</button>
+        <p class="tnote">Launches on the in-game Dead Shift chain for this run — one coin per game. Its price follows your team: kills pump it, downs dump it, killing The Brute moons it. It is not a real token.</p>
+      </div>
+      <div class="tprev"><div class="tsec">Preview</div>
+        <div class="tcard"><div class="pimg" id="pImgBox"><span>A preview of how the coin will look</span></div><b id="pName">Coin name</b><span id="pTicker">$TICKER</span><p id="pDesc"></p></div>
+      </div>
+    </div>
+    <div id="termLive" class="hidden">
+      <div class="tlhead"><div class="pimg small" id="lImg"></div><div><b id="lName"></b> <span id="lTicker"></span><div class="tsub" id="lBy"></div></div></div>
+      <div class="tlstats"><div><small>Price</small><b id="lPrice"></b></div><div><small>Since launch</small><b id="lChg"></b></div><div><small>Market cap</small><b id="lMc"></b></div><div><small>All-time high</small><b id="lAth"></b></div></div>
+      <canvas id="lChart" width="640" height="220"></canvas>
+      <p class="tsub" id="lDesc"></p>
+      <p class="tnote">Live on the Dead Shift chain for this run. Keep killing to pump it. Not a real token.</p>
+    </div>
+  </div>
 </div>
 
 <div id="over" class="overlay hidden">
@@ -626,10 +711,11 @@ const WALL_GUNS = [
 // one part spot per room, every room behind a door: each game the 8 parts land in 8 different rooms
 const PART_ROOMS = [[6, 9], [4, 13], [6, 23], [15, 16], [23, 6], [36, 8], [34, 17], [37, 23], [44, 3], [46, 24], [36, 39], [2, 40], [25, 40]];
 const BUILDS = {
-  shield: { name: 'Zombie Shield', parts: [{ name: 'Door Panel' }, { name: 'Handle Frame' }, { name: 'Bolt Kit' }, { name: 'Hinge Plate' }] },
+  terminal: { name: 'Launch Terminal', parts: [{ name: 'Motherboard' }, { name: 'Monitor' }, { name: 'Keyboard' }, { name: 'Hard Drive' }, { name: 'Wi-Fi Antenna' }] },
   cannon: { name: 'Projector Cannon', parts: [{ name: 'Arc Coil' }, { name: 'Projector Lens' }, { name: 'Film Reel' }, { name: 'Power Cell' }] },
 };
-const PART_COUNT = { shield: BUILDS.shield.parts.length, cannon: BUILDS.cannon.parts.length };
+const PART_COUNT = { terminal: BUILDS.terminal.parts.length, cannon: BUILDS.cannon.parts.length };
+const COIN_START = 0.0000042, COIN_SUPPLY = 1e9; // the in-game coin (Dead Shift chain)
 const PART_LIST = [];
 for (const b in BUILDS) BUILDS[b].parts.forEach((pt, i) => PART_LIST.push(Object.assign({ b, i }, pt)));
 const SHIELD_HP = 1200, SHIELD_REPLACE = 500;
@@ -941,7 +1027,7 @@ function initHost() {
     scene: 'kino', nachtOpen: false, transfer: null,
     special: null, nextDog: 5, nextBoss: 10, bossT: 0, dogHp: 0, fireSale: 0,
     partSpot: PART_ROOMS.map((_, i) => i).sort(() => Math.random() - .5).slice(0, PART_LIST.length), partTaken: PART_LIST.map(() => false),
-    built: { shield: false, cannon: false }, cannonTaken: false,
+    built: { terminal: false, cannon: false }, cannonTaken: false, coin: null,
   };
   doorsOpen = {};
   recomputeSpawns();
@@ -1066,6 +1152,17 @@ function hostHandle(pid, m) {
       break;
     }
     case 'buy': if (p) hostBuy(p, m); break;
+    case 'launch': { // the Launch Terminal: one coin per run, on the in-game Dead Shift chain
+      if (!p || p.down || p.dead || !host.built.terminal || host.coin) return;
+      const clean = (v, n) => String(v || '').replace(/[<>\u0000-\u001f]/g, '').trim().slice(0, n);
+      const name = clean(m.name, 32), ticker = String(m.ticker || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 10), desc = clean(m.desc, 200);
+      if (!name || !ticker) return msgTo(p, 'Your coin needs a name and a ticker');
+      const img = typeof m.img === 'string' && m.img.length < 40000 && /^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(m.img) ? m.img : null;
+      const pair = m.pair === 'USDC' ? 'USDC' : 'SOL', x = clean(m.x, 40), web = clean(m.web, 60);
+      host.coin = { name, ticker, desc, img, pair, x, web, by: p.name, price: COIN_START, ath: COIN_START, t: 0, candles: [], cur: { o: COIN_START, h: COIN_START, l: COIN_START, c: COIN_START } };
+      broadcast(ev('coinlaunch', { name, ticker, desc, img, pair, x, web, by: p.name }));
+      break;
+    }
     case 'pick': {
       if (!p || !CHARACTERS[m.ch] || p.ch === m.ch) return;
       const taken = playerList().some(q => q !== p && q.ch === m.ch);
@@ -1220,12 +1317,6 @@ function hostBuy(p, m) {
     if (!BUILDS[m.b] || H.built[m.b] || !partsReady(m.b)) return;
     H.built[m.b] = true;
     broadcast(ev('built', { b: m.b, name: p.name }));
-  } else if (m.k === 'shield') {
-    if (!H.built.shield || p.shield > 0) return;
-    const cost = p.shieldN ? SHIELD_REPLACE : 0;
-    if (p.pts < cost) return msgTo(p, 'Not enough points');
-    p.pts -= cost; p.shield = SHIELD_HP; p.shieldN++;
-    sendTo(p.id, ev('gotshield'));
   } else if (m.k === 'cannon') {
     if (!H.built.cannon || H.cannonTaken) return;
     H.cannonTaken = true;
@@ -1265,6 +1356,22 @@ function doTransfer(to) {
   H.flow = null; recomputeSpawns();
   broadcast(ev('scene', { scene: to }));
 }
+// the team's coin reacts to how the game is going
+function coinMove(f) {
+  const c = host && host.coin; if (!c) return;
+  c.price = Math.max(1e-10, c.price * f); c.ath = Math.max(c.ath, c.price);
+  c.cur.h = Math.max(c.cur.h, c.price); c.cur.l = Math.min(c.cur.l, c.price); c.cur.c = c.price;
+}
+function coinTick(dt) {
+  const c = host.coin; if (!c) return;
+  coinMove(1 + (Math.random() - .5) * .045 * Math.sqrt(dt)); // market noise
+  c.t += dt;
+  if (c.t >= 6) { // a new candle every 6 seconds
+    c.t = 0; c.candles.push([c.cur.o, c.cur.h, c.cur.l, c.cur.c]); if (c.candles.length > 40) c.candles.shift();
+    c.cur = { o: c.price, h: c.price, l: c.price, c: c.price };
+    broadcast(ev('coincandles', { candles: c.candles.map(k => k.map(v => +v.toPrecision(5))) }));
+  }
+}
 function damageZombie(z, dmg, p, head, knife) {
   const mult = host.dbl > 0 ? 2 : 1;
   if (host.insta > 0) dmg = z.k === 'boss' ? Math.max(dmg, 1000) : z.hp; // insta-kill only dents the boss
@@ -1278,6 +1385,7 @@ function damageZombie(z, dmg, p, head, knife) {
 }
 function killZombie(z, canDrop) {
   host.zombies.splice(host.zombies.indexOf(z), 1);
+  coinMove(z.k === 'boss' ? 1.35 : z.k === 'dog' ? 1.012 : 1.006); // kills pump it, The Brute moons it
   host.sinceDrop++;
   // the boss and the last hellhound of a dog round always drop a Max Ammo
   const lastDog = host.special === 'dogs' && z.k === 'dog' && host.toSpawn <= 0 && !host.zombies.some(q => q.k === 'dog');
@@ -1300,6 +1408,7 @@ function hurtPlayer(p, dmg, t) {
   if (p.hp <= 0) {
     const solo = playerList().length === 1;
     p.autoRev = solo && p.perks.includes('V') ? 6 : 0;
+    coinMove(.88); // a down dumps it
     p.hp = 0; p.down = true; p.bleed = 30; p.rev = 0; p.downs++; p.perks = [];
     broadcast(ev('down', { pid: p.id, name: p.name, self: p.autoRev > 0 }));
   }
@@ -1322,6 +1431,7 @@ function startRound(n) {
     H.toSpawn = Math.round((6 + (n - 1) * 3.2) * (1 + 0.6 * (np - 1)));
     if (n >= H.nextBoss) { H.bossT = rand(12, 25); H.nextBoss = n + 5; if (H.nextBoss === H.nextDog) H.nextBoss++; }
   }
+  coinMove(1.06);
   broadcast(ev('round', { n, special: H.special }));
 }
 function spawnDog() {
@@ -1387,6 +1497,7 @@ function hostTick(dt) {
     H.insta = Math.max(0, H.insta - dt); H.dbl = Math.max(0, H.dbl - dt);
     H.tpCool = Math.max(0, H.tpCool - dt); H.fireSale = Math.max(0, H.fireSale - dt);
     if (H.transfer && (H.transfer.t -= dt) <= 0) doTransfer(H.transfer.to);
+    coinTick(dt);
     if (H.bossT > 0 && H.inter <= 0) { H.bossT -= dt; if (H.bossT <= 0) spawnBoss(); }
     if (H.boxMove > 0) H.boxMove -= dt;
     if (H.box) {
@@ -1567,7 +1678,8 @@ function hostTick(dt) {
       pw: H.power ? 1 : 0, ln: H.linked ? 1 : 0, tc: Math.ceil(H.tpCool), pt: Math.ceil(Math.max(0, H.papT)),
       bx: H.boxLoc, bm: H.boxMove > 0 ? 1 : 0, tr: H.traps.map(s => [Math.ceil(Math.max(0, s.on)), Math.ceil(s.cd)]),
       sp: H.special, fs: Math.ceil(H.fireSale), pp: PART_LIST.map((_, i) => H.partTaken[i] ? -1 : H.partSpot[i]),
-      bd: [H.built.shield ? 1 : 0, H.built.cannon ? (H.cannonTaken ? 2 : 1) : 0],
+      bd: [H.built.terminal ? (H.coin ? 2 : 1) : 0, H.built.cannon ? (H.cannonTaken ? 2 : 1) : 0],
+      cn: H.coin ? [+H.coin.price.toPrecision(5), +((H.coin.price / COIN_START - 1) * 100).toFixed(1), +H.coin.ath.toPrecision(5)] : null,
       bh: H.zombies.filter(z => z.k === 'boss').reduce((a, z) => Math.max(a, +(z.hp / z.max).toFixed(3)), 0),
       zs: H.zombies.map(z => [z.id, +z.x.toFixed(2), +z.z.toFixed(2), +z.yaw.toFixed(2), z.rise > 0 ? 1 : 0, z.run, z.attacking ? 1 : 0, z.k === 'dog' ? 1 : z.k === 'boss' ? 2 : 0]),
       md: H.mode, sm: H.startMode, sc: H.scene, nu: H.nachtOpen ? 1 : 0, tf: H.transfer ? [H.transfer.to, Math.ceil(H.transfer.t)] : null,
@@ -1665,7 +1777,7 @@ const world = new THREE.Group(); scene.add(world);    // raycastable static geom
 const zGroup = new THREE.Group(); scene.add(zGroup);  // live zombies (raycastable)
 const fxGroup = new THREE.Group(); scene.add(fxGroup);// never raycast
 const doorMeshes = {}, roomLights = [], powerFx = [], spinners = [], boxSpots = [], trapPlates = [], partMeshes = [], portalSheets = [];
-let benchShield = null, benchCannon = null;
+let benchTerminal = null, benchCannon = null;
 let screenCtx = null, screenTex = null, padMat = null, beam = null, lever = null, boxGlow, boxLabel, boxLight;
 const mtx = new THREE.Matrix4();
 const MATS = {};
@@ -1947,10 +2059,17 @@ function buildMachines() {
     for (const [lx, lz] of [[-1.2, -.6], [1.2, -.6], [-1.2, .6], [1.2, .6]]) { const leg = box3(.16, 1, .16, mat('dark', [1, 1])); leg.position.set(x + lx, .5, z + lz); world.add(leg); }
     const vise = box3(.3, .3, .4, mat('metal', [1, 1])); vise.position.set(x - 1.1, 1.25, z); world.add(vise);
     const lamp = box3(.25, .2, .25, new THREE.MeshBasicMaterial({ color: 0xffe0a0 })); lamp.position.set(x, 2.8, z); world.add(lamp);
-    benchShield = new THREE.Group();
-    const board = box3(.9, 1.1, .1, mat('board', [1, 1])); benchShield.add(board);
-    for (const yy of [-.4, .4]) { const strap = box3(.95, .1, .12, mat('metal', [1, 1])); strap.position.y = yy; benchShield.add(strap); }
-    benchShield.position.set(x - .5, 1.65, z); benchShield.rotation.x = -.3; benchShield.visible = false; fxGroup.add(benchShield);
+    benchTerminal = new THREE.Group(); // the Launch Terminal once its 5 pieces are in
+    { const dark = new THREE.MeshLambertMaterial({ color: 0x1a1c22 }), glow = new THREE.MeshBasicMaterial({ color: 0x3affb0 });
+      const mon = box3(1.1, .75, .08, dark); mon.position.y = .55; benchTerminal.add(mon);
+      const scr = box3(.98, .62, .02, glow); scr.position.set(0, .55, .05); benchTerminal.add(scr);
+      const stand = box3(.1, .3, .1, dark); stand.position.y = .15; benchTerminal.add(stand);
+      const kb = box3(.9, .05, .3, dark); kb.position.set(0, .03, .4); benchTerminal.add(kb);
+      const tower = box3(.3, .6, .55, dark); tower.position.set(.8, .3, 0); benchTerminal.add(tower);
+      const led = box3(.04, .04, .02, new THREE.MeshBasicMaterial({ color: 0xff3a3a })); led.position.set(.8, .5, .28); benchTerminal.add(led);
+      const ant = box3(.03, .5, .03, dark); ant.position.set(.9, .85, -.15); benchTerminal.add(ant); }
+    benchTerminal.position.set(x - .55, 1.1, z); benchTerminal.visible = false; fxGroup.add(benchTerminal);
+    const tlab = textSprite('Launch Terminal · press P', '#3affb0', 44); tlab.position.set(0, 1.5, 0); tlab.scale.set(2.4, .6, 1); benchTerminal.add(tlab);
     benchCannon = makeCannonModel(); benchCannon.position.set(x + .6, 1.3, z); benchCannon.rotation.y = .6; benchCannon.visible = false; fxGroup.add(benchCannon);
     const lab = textSprite('Workbench', '#fd6', 50); lab.position.set(x, 3.2, z); lab.scale.set(1.8, .45, 1); fxGroup.add(lab);
   }
@@ -2371,7 +2490,12 @@ function makeCannonModel() {
 function makePartModel(name) {
   const g = new THREE.Group(), inner = new THREE.Group(); g.add(inner);
   const brass = new THREE.MeshLambertMaterial({ color: 0xc09040, emissive: 0x201000 });
-  if (name === 'Door Panel') inner.add(box3(.7, .9, .08, mat('board', [1, 1])));
+  const darkM = new THREE.MeshLambertMaterial({ color: 0x1a1c22 }), greenG = new THREE.MeshBasicMaterial({ color: 0x3affb0 });
+  if (name === 'Motherboard') { inner.add(box3(.6, .05, .45, new THREE.MeshLambertMaterial({ color: 0x1f6a3a }))); const chip = box3(.16, .06, .16, darkM); chip.position.y = .04; inner.add(chip); }
+  else if (name === 'Monitor') { inner.add(box3(.6, .42, .06, darkM)); const sc = box3(.52, .34, .02, greenG); sc.position.z = .04; inner.add(sc); }
+  else if (name === 'Keyboard') { inner.add(box3(.62, .05, .22, darkM)); for (let i = 0; i < 4; i++) { const k = box3(.12, .03, .05, greenG); k.position.set(-.21 + i * .14, .04, 0); inner.add(k); } }
+  else if (name === 'Hard Drive') { inner.add(box3(.36, .08, .5, mat('metal', [1, 1]))); }
+  else if (name === 'Wi-Fi Antenna') { inner.add(box3(.3, .06, .2, darkM)); for (const sx of [-1, 1]) { const a = box3(.03, .45, .03, darkM); a.position.set(sx * .1, .25, 0); a.rotation.z = sx * .25; inner.add(a); } }
   else if (name === 'Handle Frame') { inner.add(box3(.7, .08, .08, mat('metal', [1, 1]))); const h = box3(.08, .4, .08, mat('metal', [1, 1])); h.position.y = -.2; inner.add(h); }
   else if (name === 'Bolt Kit') inner.add(box3(.45, .25, .3, mat('metal', [1, 1])));
   else if (name === 'Hinge Plate') { inner.add(box3(.5, .5, .06, mat('metal', [1, 1]))); const pin = box3(.08, .55, .08, brass); pin.position.x = -.25; inner.add(pin); }
@@ -2407,7 +2531,8 @@ function drawBoard(t) {
   const g = boardCv.getContext('2d'); g.fillStyle = '#020403'; g.fillRect(0, 0, 512, 120);
   g.fillStyle = '#3affb0'; g.font = '22px VT323, monospace'; g.textAlign = 'left';
   g.fillText(boardCoins.live ? 'LIVE · TRENDING ON PUMP.FUN · 24H' : 'TRADING FLOOR · MARKETS', 12, 24);
-  const list = boardCoins.length ? boardCoins : [['$SHIFT', 4200], ['$BRAINZ', 1337], ['$RUGGED', -99], ['$FROGZ', 690]];
+  const base = boardCoins.length ? boardCoins : [['$SHIFT', 4200], ['$BRAINZ', 1337], ['$RUGGED', -99], ['$FROGZ', 690]];
+  const list = myCoin ? [['$' + myCoin.ticker + ' ★', myCoin.chg || 0], ...base] : base; // your team's coin heads the board
   const per = 8, start = Math.floor(t / 4) * per % Math.max(1, list.length);
   for (let i = 0; i < per; i++) { const [s, v] = list[(start + i) % list.length], x = 12 + (i % 4) * 125, y = 62 + Math.floor(i / 4) * 40;
     g.fillStyle = '#e9e4da'; g.font = '22px VT323, monospace'; g.fillText(String(s).slice(0, 10), x, y);
@@ -2415,6 +2540,72 @@ function drawBoard(t) {
   boardTex.needsUpdate = true;
 }
 let decoT = 0;
+// ---------- the Launch Terminal ----------
+let myCoin = null, termOpen = false, termImg = null, termPair = 'SOL';
+const fmtPrice = v => '$' + (v >= .01 ? v.toFixed(4) : v.toFixed(Math.min(12, 3 - Math.floor(Math.log10(v)))));
+const fmtUsd = v => v >= 1e6 ? '$' + (v / 1e6).toFixed(2) + 'M' : v >= 1e3 ? '$' + (v / 1e3).toFixed(1) + 'K' : '$' + v.toFixed(0);
+function openTerminal() {
+  if (termOpen || !state || !state.bd[0]) return;
+  termOpen = true; mouseDown = rightDown = false;
+  if (document.pointerLockElement) document.exitPointerLock();
+  $('pause').classList.add('hidden'); $('term').classList.remove('hidden');
+  if (myCoin) showTermLive(); else { $('termForm').classList.remove('hidden'); $('termLive').classList.add('hidden'); setTimeout(() => $('tName').focus(), 50); }
+}
+function closeTerminal() {
+  termOpen = false; $('term').classList.add('hidden'); document.activeElement && document.activeElement.blur && document.activeElement.blur();
+  if (IS_TOUCH) return; $('pause').classList.remove('hidden'); requestLock();
+}
+function showTermLive() { $('termForm').classList.add('hidden'); $('termLive').classList.remove('hidden'); renderTermLive(); }
+function renderTermLive() {
+  const c = myCoin; if (!c) return;
+  $('lName').textContent = c.name; $('lTicker').textContent = '$' + c.ticker;
+  $('lBy').textContent = `Launched by ${c.by} · ${c.pair} pair${c.x ? ' · X: ' + c.x : ''}${c.web ? ' · ' + c.web : ''}`;
+  $('lImg').style.backgroundImage = c.img ? `url(${c.img})` : ''; $('lDesc').textContent = c.desc || '';
+  $('lPrice').textContent = fmtPrice(c.price); $('lChg').textContent = `${c.chg >= 0 ? '▲' : '▼'} ${Math.abs(c.chg).toFixed(1)}%`;
+  $('lChg').style.color = c.chg >= 0 ? '#3ade80' : '#f05252'; $('lMc').textContent = fmtUsd(c.price * COIN_SUPPLY); $('lAth').textContent = fmtPrice(c.ath);
+  const cv = $('lChart'), g = cv.getContext('2d'), W = cv.width, H = cv.height, cs = c.candles.concat([[c.price, c.price, c.price, c.price]]);
+  g.fillStyle = '#08090b'; g.fillRect(0, 0, W, H);
+  const lo = Math.min(...cs.map(k => k[2])), hi = Math.max(...cs.map(k => k[1])), Y = v => H - 16 - (v - lo) / ((hi - lo) || 1) * (H - 32), cw = (W - 20) / Math.max(30, cs.length);
+  g.strokeStyle = 'rgba(255,255,255,.06)'; for (let i = 1; i < 4; i++) { g.beginPath(); g.moveTo(0, H * i / 4); g.lineTo(W, H * i / 4); g.stroke(); }
+  cs.forEach(([o, h, l, cl], i) => { const x = 10 + i * cw, col = cl >= o ? '#3ade80' : '#f05252'; g.fillStyle = col; g.fillRect(x + cw / 2 - 1, Y(h), 2, Math.max(1, Y(l) - Y(h))); const t = Y(Math.max(o, cl)); g.fillRect(x + 2, t, Math.max(2, cw - 4), Math.max(2, Y(Math.min(o, cl)) - t)); });
+  if (cs.length < 3) { g.fillStyle = '#8a8a96'; g.font = '16px system-ui'; g.textAlign = 'center'; g.fillText('First candles print every 6 seconds…', W / 2, H / 2); g.textAlign = 'left'; }
+}
+function termPreview() {
+  $('pName').textContent = $('tName').value.trim() || 'Coin name';
+  $('pTicker').textContent = '$' + ($('tTicker').value.toUpperCase().replace(/[^A-Z0-9]/g, '') || 'TICKER');
+  $('pDesc').textContent = $('tDesc').value.trim();
+}
+for (const id of ['tName', 'tTicker', 'tDesc']) $(id).addEventListener('input', () => { termPreview(); $('tErr').textContent = ''; });
+$('tTicker').addEventListener('input', e => { const v = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''); if (v !== e.target.value) e.target.value = v; });
+$('tPair').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; termPair = b.dataset.pair; [...$('tPair').children].forEach(x => x.classList.toggle('on', x === b)); });
+$('tPick').onclick = () => $('tFile').click();
+$('tFile').onchange = e => e.target.files[0] && loadCoinImage(e.target.files[0]);
+const drop = $('tDrop');
+drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('over'); });
+drop.addEventListener('dragleave', () => drop.classList.remove('over'));
+drop.addEventListener('drop', e => { e.preventDefault(); drop.classList.remove('over'); const f = e.dataTransfer.files[0]; if (f) loadCoinImage(f); });
+function loadCoinImage(file) {
+  if (!/^image\//.test(file.type)) { $('tErr').textContent = 'That file is not an image. Use a PNG, JPG, GIF or WebP.'; return; }
+  if (file.size > 15e6) { $('tErr').textContent = 'That image is over 15 MB. Pick a smaller one.'; return; }
+  const r = new FileReader();
+  r.onload = () => { const im = new Image(); im.onload = () => {
+    // crop to a square and shrink to 96px so it can be sent to everyone in the game
+    const cv = document.createElement('canvas'); cv.width = cv.height = 96; const g = cv.getContext('2d'), sz = Math.min(im.width, im.height);
+    g.drawImage(im, (im.width - sz) / 2, (im.height - sz) / 2, sz, sz, 0, 0, 96, 96);
+    termImg = cv.toDataURL('image/png'); if (termImg.length > 38000) termImg = cv.toDataURL('image/jpeg', .8);
+    $('pImgBox').style.backgroundImage = `url(${termImg})`; $('pImgBox').firstElementChild.textContent = ''; $('tErr').textContent = '';
+  }; im.onerror = () => { $('tErr').textContent = 'That image could not be read. Try another file.'; }; im.src = r.result; };
+  r.readAsDataURL(file);
+}
+$('tCreate').onclick = () => {
+  const name = $('tName').value.trim(), ticker = $('tTicker').value.trim();
+  if (!name) { $('tErr').textContent = 'Give your coin a name.'; $('tName').focus(); return; }
+  if (!ticker) { $('tErr').textContent = 'Add a ticker, like BRAINZ.'; $('tTicker').focus(); return; }
+  $('tCreate').disabled = true; $('tCreate').textContent = 'Launching…';
+  sendToHost({ t: 'launch', name, ticker, desc: $('tDesc').value, img: termImg, pair: termPair, x: $('tX').value, web: $('tWeb').value });
+  setTimeout(() => { $('tCreate').disabled = false; $('tCreate').textContent = 'Create coin'; if (!myCoin) $('tErr').textContent = 'The launch did not go through. If a teammate already launched a coin this game, open the terminal again to see it.'; }, 2500);
+};
+$('termClose').onclick = closeTerminal;
 // pixel-art meme posters (all original: generic frog, shiba, rockets, charts, our own $SHIFT coin)
 function memeTex(kind, aspect) {
   const H = 64, W = Math.round(H * aspect), cv = document.createElement('canvas'); cv.width = W; cv.height = H;
@@ -2476,8 +2667,15 @@ function drawScreen(t, on) {
   const g = screenCtx;
   g.setTransform(1, 0, 0, 1, 0, 0);
   if (!on) { g.fillStyle = '#1a1a1a'; g.fillRect(0, 0, 320, 180); screenTex.needsUpdate = true; return; }
-  const cycle = topChart ? COUNT_SECS + CHART_SECS : COUNT_SECS, phase = t % cycle;
-  if (phase >= COUNT_SECS) return drawTopChart(phase - COUNT_SECS);
+  // countdown, then the top real coin, then countdown, then your team's coin (whichever exist)
+  const segs = [['count', COUNT_SECS]];
+  if (topChart) segs.push(['top', CHART_SECS]);
+  if (myCoin && myCoin.candles.length > 1) { if (topChart) segs.push(['count', COUNT_SECS]); segs.push(['team', CHART_SECS]); }
+  let phase = t % segs.reduce((a, s) => a + s[1], 0), seg = segs[0];
+  for (const sg of segs) { if (phase < sg[1]) { seg = sg; break; } phase -= sg[1]; }
+  if (seg[0] === 'top') return drawTopChart(phase, topChart, '● LIVE · TOP PUMP.FUN COIN · 5M CANDLES', 'DATA: GECKOTERMINAL · NOT FINANCIAL ADVICE');
+  if (seg[0] === 'team') return drawTopChart(phase, { team: true, s: myCoin.ticker, c: myCoin.chg, img: myCoin.imgEl, candles: myCoin.candles.map(k => [0, ...k]).concat([[0, myCoin.candles[myCoin.candles.length - 1][3], myCoin.price, myCoin.price, myCoin.price]]) },
+    `● LIVE · DEAD SHIFT CHAIN · LAUNCHED BY ${String(myCoin.by).toUpperCase()}`, 'IN-GAME COIN · YOUR KILLS MOVE THE PRICE · NOT A REAL TOKEN');
   g.setTransform(2, 0, 0, 2, 0, 0); // the countdown is drawn on a 160x90 grid
   const w = 160, h = 90;
   t = phase;
@@ -2492,8 +2690,8 @@ function drawScreen(t, on) {
   for (let i = 0; i < 60; i++) { g.fillStyle = Math.random() < .5 ? 'rgba(0,0,0,.35)' : 'rgba(255,255,255,.3)'; g.fillRect(Math.random() * w, Math.random() * h, 1, Math.random() * 4); }
   screenTex.needsUpdate = true;
 }
-function drawTopChart(p) {
-  const g = screenCtx, W = 320, H = 180, d = topChart, cs = d.candles;
+function drawTopChart(p, d, label, footer) {
+  const g = screenCtx, W = 320, H = 180, cs = d.candles;
   g.fillStyle = '#05080a'; g.fillRect(0, 0, W, H);
   // candles appear one by one, like a live feed
   const shown = Math.max(2, Math.min(cs.length, Math.ceil(cs.length * Math.min(1, p / (CHART_SECS * .6)))));
@@ -2511,10 +2709,12 @@ function drawTopChart(p) {
   g.strokeStyle = 'rgba(255,211,106,.6)'; g.setLineDash([3, 3]); g.beginPath(); g.moveTo(x0, ly); g.lineTo(x1, ly); g.stroke(); g.setLineDash([]);
   if (Math.sin(p * 8) > 0) { g.fillStyle = '#ffd36a'; g.fillRect(x0 + (vis.length - 1) * cw + cw / 2 - 2, ly - 2, 4, 4); }
   g.textBaseline = 'alphabetic'; g.textAlign = 'left'; g.font = '22px VT323, monospace';
-  g.fillStyle = '#e9e4da'; g.fillText('$' + d.s, 14, 26);
-  g.fillStyle = d.c >= 0 ? '#3ade80' : '#f05252'; g.fillText(`${d.c >= 0 ? '▲' : '▼'} ${Math.abs(d.c).toLocaleString(undefined, { maximumFractionDigits: 1 })}% 24H`, 14 + g.measureText('$' + d.s + '  ').width, 26);
-  g.font = '16px VT323, monospace'; g.fillStyle = '#ff4fa8'; g.fillText('● LIVE · TOP PUMP.FUN COIN · 5M CANDLES', 14, 42);
-  g.textAlign = 'right'; g.fillStyle = 'rgba(233,228,218,.55)'; g.fillText('DATA: GECKOTERMINAL · NOT FINANCIAL ADVICE', W - 14, H - 6);
+  let tx = 14;
+  if (d.img && d.img.complete && d.img.naturalWidth) { g.imageSmoothingEnabled = false; g.drawImage(d.img, 14, 8, 24, 24); tx = 44; }
+  g.fillStyle = '#e9e4da'; g.fillText('$' + d.s, tx, 26);
+  g.fillStyle = d.c >= 0 ? '#3ade80' : '#f05252'; g.fillText(`${d.c >= 0 ? '▲' : '▼'} ${Math.abs(d.c).toLocaleString(undefined, { maximumFractionDigits: 1 })}%${d.team ? ' SINCE LAUNCH' : ' 24H'}`, tx + g.measureText('$' + d.s + '  ').width, 26);
+  g.font = '16px VT323, monospace'; g.fillStyle = '#ff4fa8'; g.fillText(label, 14, 46);
+  g.textAlign = 'right'; g.fillStyle = 'rgba(233,228,218,.55)'; g.fillText(footer, W - 14, H - 6);
   for (let i = 0; i < 40; i++) { g.fillStyle = 'rgba(255,255,255,.06)'; g.fillRect(Math.random() * W, Math.random() * H, 1, Math.random() * 6); } // a little film grain
   screenTex.needsUpdate = true;
 }
@@ -2921,7 +3121,8 @@ function onState(m) {
   for (const d of m.doors) if (!doorsOpen[d]) openDoorVisual(d);
   if (m.pw && !powerShown) applyPower();
   partMeshes.forEach((pm, i) => { const at = m.pp[i]; pm.visible = at >= 0; if (at >= 0) { const [x, z] = cellCenter(...PART_ROOMS[at]); pm.position.set(x, groundAt(x, z) + .7, z); } });
-  benchShield.visible = !!m.bd[0]; benchCannon.visible = m.bd[1] === 1;
+  benchTerminal.visible = !!m.bd[0]; benchCannon.visible = m.bd[1] === 1;
+  if (m.cn && myCoin) { myCoin.price = m.cn[0]; myCoin.chg = m.cn[1]; myCoin.ath = m.cn[2]; }
   if (m.bx !== boxShown && !boxAnim) placeBox(m.bx);
   padMat.color.setHex(m.ln ? 0x55ffff : m.pw ? 0x335555 : 0x223333);
   m.tr.forEach(([on], i) => trapPlates[i].emissive.setHex(on ? (TRAPS[i].kind === 'fire' ? 0x662200 : 0x113355) : 0));
@@ -2975,8 +3176,15 @@ function onEvent(m) {
       feed(`${m.name} found the ${m.part} (${m.item})`, '#fd6'); sTone([520, 780], .2, 'triangle', .15);
       if (m.ready) feed(`All ${m.item} parts found — build it at the Workshop bench`, '#fd6');
       break;
+    case 'coinlaunch':
+      myCoin = { name: m.name, ticker: m.ticker, desc: m.desc, img: m.img, pair: m.pair, x: m.x, web: m.web, by: m.by, price: COIN_START, chg: 0, ath: COIN_START, candles: [] };
+      if (m.img) { myCoin.imgEl = new Image(); myCoin.imgEl.src = m.img; }
+      announce('🚀 $' + m.ticker + ' launched', 3.5, '#3affb0'); feed(`${m.by} launched $${m.ticker} (${m.name}) on the Dead Shift chain — kills pump it, downs dump it`, '#3affb0');
+      sTone([392, 523, 659, 784, 1046], .3, 'triangle', .2, .1);
+      if (termOpen) showTermLive();
+      break;
+    case 'coincandles': if (myCoin) myCoin.candles = m.candles; break;
     case 'built': announce(BUILDS[m.b].name + ' built', 2.5, '#fd6'); feed(`${m.name} built the ${BUILDS[m.b].name} at the workbench`, '#fd6'); sBuy(); break;
-    case 'gotshield': feed('Zombie Shield equipped — it soaks hits until it breaks, and your knife hits harder', '#fd6'); sBuy(); break;
     case 'shieldbreak': feed('Your shield broke! Grab another at the workbench', '#f88'); sNoise(1200, .5, .4); me.shake = .3; break;
     case 'hurt': me.shake = .25; sThud(.5); break;
     case 'down':
@@ -3029,7 +3237,7 @@ function onEvent(m) {
       if (IS_TOUCH) { document.body.classList.add('playing'); $('touchUI').classList.remove('hidden'); }
       doorsOpen = {}; for (const id in doorMeshes) doorMeshes[id].forEach(o => o.visible = true);
       me.x = m.x; me.z = m.z; me.y = 0; me.down = me.dead = false; me.last = null; me.inv = [{ id: 'pistol', mag: 8, res: 80 }]; me.cur = 0; equip();
-      lastPts = null; requestLock();
+      lastPts = null; myCoin = null; requestLock();
       break;
   }
 }
@@ -3048,7 +3256,8 @@ function grant(w) {
 
 // ---------- input ----------
 addEventListener('keydown', e => {
-  if (document.activeElement && document.activeElement.tagName === 'INPUT') return;
+  if (termOpen) { if (e.code === 'Escape') closeTerminal(); return; } // typing in the terminal never moves you
+  if (document.activeElement && /^(INPUT|TEXTAREA)$/.test(document.activeElement.tagName)) return;
   keys[e.code] = true;
   if (!gameStarted || me.dead) return;
   if (e.code === 'KeyR') startReload();
@@ -3056,6 +3265,7 @@ addEventListener('keydown', e => {
   if (e.code === 'Digit1' || e.code === 'Digit2' || e.code === 'Digit3') swapTo(+e.code.slice(-1) - 1);
   if (e.code === 'KeyV') knife();
   if (e.code === 'KeyF') interact();
+  if (e.code === 'KeyP' && state && state.bd[0] && benchCell && near(benchCell, 3.0) && !me.down) openTerminal();
 });
 addEventListener('keyup', e => { keys[e.code] = false; });
 addEventListener('mousedown', e => {
@@ -3146,7 +3356,7 @@ function requestLock() {
 $('pause').addEventListener('click', requestLock);
 document.addEventListener('pointerlockchange', () => {
   const locked = document.pointerLockElement === renderer.domElement;
-  $('pause').classList.toggle('hidden', locked || !gameStarted || gameOver);
+  $('pause').classList.toggle('hidden', locked || !gameStarted || gameOver || termOpen);
   if (!locked) mouseDown = rightDown = false;
 });
 
@@ -3296,11 +3506,11 @@ function findInteract() {
   if (near(benchCell, 3.0)) {
     const have = b => PART_LIST.filter((pt, i) => pt.b === b && state.pp[i] === -1).length;
     const mine = state.ps.find(p => p.id === net.myId) || {};
-    if (!state.bd[0] && have('shield') === PART_COUNT.shield) return { kind: 'build', b: 'shield', label: 'Press <b>F</b> to build the <b>Zombie Shield</b>' };
+    if (!state.bd[0] && have('terminal') === PART_COUNT.terminal) return { kind: 'build', b: 'terminal', label: 'Press <b>F</b> to build the <b>Launch Terminal</b>' };
     if (!state.bd[1] && have('cannon') === PART_COUNT.cannon) return { kind: 'build', b: 'cannon', label: 'Press <b>F</b> to build the <b>Projector Cannon</b>' };
     if (state.bd[1] === 1) return { kind: 'cannon', label: 'Press <b>F</b> to take the <b>Projector Cannon</b> (only one exists)' };
-    if (state.bd[0] && me.shield <= 0) return { kind: 'shield', label: `Press <b>F</b> to take a <b>Zombie Shield</b> <b>[${mine.sn ? '$' + SHIELD_REPLACE : 'free'}]</b>` };
-    return { kind: 'none', label: `Workbench — Shield parts ${have('shield')}/${PART_COUNT.shield} · Cannon parts ${have('cannon')}/${PART_COUNT.cannon}` };
+    if (state.bd[0]) return { kind: 'terminal', label: state.bd[0] === 2 ? `Press <b>P</b> to open the Launch Terminal — $${esc(myCoin ? myCoin.ticker : '')} is live` : 'Press <b>P</b> to open the Launch Terminal and launch your coin' };
+    return { kind: 'none', label: `Workbench — Terminal pieces ${have('terminal')}/${PART_COUNT.terminal} · Cannon parts ${have('cannon')}/${PART_COUNT.cannon}` };
   }
   for (const loc of [state.bx, NACHT_BOX]) if (near(boxCells[loc], 3.0)) {
     if (loc === state.bx && state.bm) return { kind: 'none', label: 'The box is moving…' };
@@ -3321,7 +3531,8 @@ function interact() {
   else if (k === 'upgrade') sendToHost({ t: 'buy', k, cur: curW().id, tier: it.tier });
   else if (k === 'part') sendToHost({ t: 'buy', k, id: it.id });
   else if (k === 'build') sendToHost({ t: 'buy', k, b: it.b });
-  else if (k === 'shield' || k === 'cannon') sendToHost({ t: 'buy', k });
+  else if (k === 'cannon') sendToHost({ t: 'buy', k });
+  else if (k === 'terminal') openTerminal();
 }
 
 // ---------- minimap ----------
@@ -3474,12 +3685,16 @@ function updateHUD() {
   let pw = '';
   if (state.insta) pw += `<span style="color:#f55">INSTA-KILL ${state.insta}</span>`;
   if (state.fs) pw += `<span style="color:#f8a">FIRE SALE ${state.fs}</span>`;
+  $('coinHud').classList.toggle('hidden', !myCoin);
+  if (myCoin) { const ch = myCoin.chg || 0;
+    $('coinHud').innerHTML = `${myCoin.img ? `<img src="${myCoin.img}" alt="">` : ''}<b>$${esc(myCoin.ticker)}</b> ${fmtPrice(myCoin.price)} <span class="${ch >= 0 ? 'up' : 'dn'}">${ch >= 0 ? '▲' : '▼'} ${Math.abs(ch).toFixed(1)}%</span>`; }
+  if (termOpen && myCoin) renderTermLive();
   if (state.tf) pw += `<span style="color:#c8f">TELEPORTING TO ${state.tf[0] === 'nacht' ? 'NACHT' : 'KINO'} IN ${state.tf[1]}</span>`;
   // buildables, shield, boss
   const parts = b => PART_LIST.map((pt, i) => pt.b === b ? `<i class="${state.pp[i] === -1 ? 'on' : ''}"></i>` : '').join('');
   const bkey = state.pp.join() + state.bd.join();
   if (bkey !== buildsShown) { buildsShown = bkey;
-    $('builds').innerHTML = `<div class="b ${state.bd[0] ? 'done' : ''}">SHIELD ${state.bd[0] ? '✓ at the workbench' : parts('shield')}</div>` +
+    $('builds').innerHTML = `<div class="b ${state.bd[0] ? 'done' : ''}">TERMINAL ${state.bd[0] === 2 ? '✓ coin launched' : state.bd[0] ? '✓ press P at the bench' : parts('terminal')}</div>` +
       `<div class="b ${state.bd[1] ? 'done' : ''}">CANNON ${state.bd[1] === 2 ? '✓ taken' : state.bd[1] ? '✓ at the workbench' : parts('cannon')}</div>`; }
   $('shieldBar').classList.toggle('hidden', !(me.shield > 0));
   if (me.shield > 0) $('shieldBar').style.setProperty('--v', (me.shield / SHIELD_HP * 100) + '%');
