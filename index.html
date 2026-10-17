@@ -2338,7 +2338,7 @@ const sWarp = () => { if (!AC) return; const t = AC.currentTime; const o = AC.cr
 const me = {
   x: 0, y: 0, z: 0, vx: 0, vz: 0, vy: 0, yaw: Math.PI, pitch: 0, hp: BASE_HP, mh: BASE_HP, pts: 500, down: false, dead: false,
   inv: [{ id: 'pistol', mag: 8, res: 80 }], cur: 0, last: null, reloadT: 0, nextFire: 0, shots: 0, ads: 0,
-  recoil: 0, knifeT: 0, buyCd: 0, bob: 0, shake: 0, perks: '', camY: EYE, stam: 4.5, stamMax: 4.5, stamLock: false,
+  recoil: 0, knifeT: 0, buyCd: 0, bob: 0, shake: 0, perks: '', camY: EYE, stam: 6.3, stamMax: 6.3, stamLock: false,
 };
 let state = null, joined = false, gameStarted = false, gameOver = false;
 const keys = {}; let mouseDown = false, rightDown = false, sens = 1.2;
@@ -2382,7 +2382,7 @@ function onState(m) {
     if (!me.perks.includes('L') && me.inv.length > 2) { // lost Pack Mule: the third gun goes
       me.inv.length = 2; if (me.cur > 1) { me.cur = 0; if (!me.last) equip(); }
     }
-    me.stamMax = me.perks.includes('K') ? 9 : 4.5;
+    me.stamMax = me.perks.includes('K') ? 12.6 : 6.3; // seconds of sprint (Stamina Shot doubles it)
     if (lastPts !== null && mine.pts !== lastPts) pointPop(mine.pts - lastPts);
     lastPts = me.pts = mine.pts;
     if (mine.dn && !me.down) { me.down = true; me.last = { id: 'pistol', mag: 8, res: 24 }; equip(); }
@@ -2984,6 +2984,7 @@ document.querySelector('.lbtabs').addEventListener('click', e => { const b = e.t
 function showRanked(m) {
   if (m.offline) { $('overRank').textContent = 'Play through a Dead Shift link to save your run on the leaderboard.'; return; }
   if (m.error) return;
+  if (m.skipped) { $('overRank').textContent = 'Runs that end in round 1 with no kills are not saved to the leaderboard'; return; }
   $('overRank').textContent = m.rank ? `#${m.rank} on the ${MODE_NAME[m.mode]} leaderboard${m.rank === 1 ? ' — a new record!' : ''}` : `Not in the ${MODE_NAME[m.mode]} top 100 this time`;
   $('overBoard').hidden = false;
   $('overBoard').innerHTML = lbTable(m.top, m.gid);
@@ -3331,7 +3332,7 @@ function runHost() {
 // Browsers pause requestAnimationFrame in background tabs; a worker timer keeps the
 // host's simulation running if they alt-tab, so the game doesn't freeze for everyone.
 const ticker = new Worker(URL.createObjectURL(new Blob(['setInterval(() => postMessage(0), 33)'], { type: 'text/javascript' })));
-ticker.onmessage = () => { if (document.hidden) runHost(); };
+ticker.onmessage = () => { if (document.hidden || now() - lastT > .1) runHost(); }; // also covers windows the browser stops drawing without marking hidden
 function frame() {
   requestAnimationFrame(frame);
   const t = now(), dt = Math.min(.1, t - lastT); lastT = t;
