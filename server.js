@@ -116,8 +116,9 @@ const server = http.createServer((req, res) => {
   } else if (pathname.startsWith('/media/')) {
     // trailer + landing images, from the media folder next to this file (Range support so phones can seek the video)
     const name = path.basename(pathname), ext = path.extname(name).toLowerCase(), types = { '.mp4': 'video/mp4', '.jpg': 'image/jpeg', '.png': 'image/png' };
-    const file = path.join(__dirname, 'media', name);
-    if (!types[ext] || name !== decodeURIComponent(pathname.slice(7)) || !fs.existsSync(file)) { res.writeHead(404); return res.end(); }
+    // look in media/ first, then next to this file (in case the files were uploaded without the folder)
+    const file = [path.join(__dirname, 'media', name), path.join(__dirname, name)].find(f => fs.existsSync(f));
+    if (!types[ext] || name !== decodeURIComponent(pathname.slice(7)) || !file) { res.writeHead(404); return res.end(); }
     const size = fs.statSync(file).size, range = /^bytes=(\d*)-(\d*)$/.exec(req.headers.range || '');
     const head = { 'content-type': types[ext], 'accept-ranges': 'bytes', 'cache-control': 'public, max-age=3600' };
     if (range && (range[1] || range[2])) {
