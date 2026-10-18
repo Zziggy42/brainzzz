@@ -123,6 +123,10 @@
   .row { display:flex; gap:8px; }
   .row > * { flex:1; }
   #status { color:#e88; font-size:14px; }
+  .creative { display:flex; flex-direction:column; gap:8px; border-top:1px dashed #3a5a2a; padding-top:12px; }
+  .creative .crgrid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  .creative .crgrid label { display:flex; flex-direction:column; gap:4px; }
+  #crStatus { font-size:14px; color:var(--dim); } #crStatus.on { color:#8f8; }
   #status:empty { display:none; }
   .help { color:var(--dim); font-size:13px; line-height:1.6; margin-top:18px; text-align:center; max-width:560px; }
   .code { font-family:VT323, monospace; font-size:72px; color:var(--ink); letter-spacing:10px; text-align:center; user-select:all; line-height:1; }
@@ -371,6 +375,16 @@
           <input id="sens" type="range" min="0.5" max="3" step="0.1" value="1.2">
         </details>
         <div id="status" role="status"></div>
+        <div id="creativeBox" class="creative hidden">
+          <label for="crKey">Creative key</label>
+          <input id="crKey" type="password" autocomplete="off" placeholder="Your CREATIVE_KEY">
+          <div class="crgrid">
+            <label for="crPts">Starting points<input id="crPts" type="number" min="0" max="99999999" value="1000000"></label>
+            <label for="crRound">Starting round<input id="crRound" type="number" min="1" max="99" value="1"></label>
+          </div>
+          <button id="crBtn" class="ghost">Unlock creative mode</button>
+          <div id="crStatus" role="status"></div>
+        </div>
       </div>
       <div class="panel hidden" id="lobbyPanel">
         <label>Room code</label>
@@ -1059,6 +1073,7 @@ function initHost() {
     special: null, nextDog: 5, nextBoss: 10, bossT: 0, dogHp: 0, fireSale: 0,
     partSpot: PART_ROOMS.map((_, i) => i).sort(() => Math.random() - .5).slice(0, PART_LIST.length), partTaken: PART_LIST.map(() => false),
     built: { terminal: false, cannon: false }, cannonTaken: false, coin: null,
+    creative: CREATIVE ? Object.assign({}, CREATIVE) : null,
   };
   doorsOpen = {};
   recomputeSpawns();
@@ -1212,10 +1227,11 @@ function hostHandle(pid, m) {
       break;
     case 'start':
       if (pid === 'H' && !host.started) {
-        if (playerList().length !== MODE_SIZE[host.mode]) return msgTo(p, `${MODE_NAME[host.mode]} needs exactly ${MODE_SIZE[host.mode]} player${MODE_SIZE[host.mode] > 1 ? 's' : ''}`);
+        if (!host.creative && playerList().length !== MODE_SIZE[host.mode]) return msgTo(p, `${MODE_NAME[host.mode]} needs exactly ${MODE_SIZE[host.mode]} player${MODE_SIZE[host.mode] > 1 ? 's' : ''}`);
         host.startMode = host.mode;
         for (const q of playerList()) if (!q.ch) q.ch = freeCharacter();
         host.started = true; host.inter = 5; broadcast(ev('start'));
+        if (host.creative) applyCreative();
       }
       break;
     case 'restart':
@@ -1428,7 +1444,7 @@ function killZombie(z, canDrop) {
   }
 }
 function hurtPlayer(p, dmg, t) {
-  if (p.down || p.dead) return;
+  if (p.down || p.dead || host.creative) return;
   if (p.shield > 0) { // the shield soaks most of the hit until it breaks
     const soak = Math.min(p.shield, dmg * .65);
     p.shield -= soak; dmg -= soak;
@@ -1695,7 +1711,7 @@ function hostTick(dt) {
       const stats = players.map(p => [p.name, p.col, p.kills, p.heads, p.revives, p.downs, p.pts, null])
         .concat(H.departed.map(d => [d.n, d.col, d.k, d.heads, d.revives, d.downs, d.pts, d.left]));
       broadcast(ev('over', { round: H.round, mode: H.startMode, stats }));
-      submitScore({ gid: Math.random().toString(36).slice(2, 12) + Date.now().toString(36), round: H.round, mode: H.startMode,
+      if (!H.creative) submitScore({ gid: Math.random().toString(36).slice(2, 12) + Date.now().toString(36), round: H.round, mode: H.startMode,
         players: inGame.map(p => ({ n: p.name, ch: p.ch, k: p.kills, left: null })).concat(H.departed.map(d => ({ n: d.n, ch: d.ch, k: d.k, left: d.left }))) });
     }
   }
@@ -1713,12 +1729,24 @@ function hostTick(dt) {
       cn: H.coin ? [+H.coin.price.toPrecision(5), +((H.coin.price / COIN_START - 1) * 100).toFixed(1), +H.coin.ath.toPrecision(5)] : null,
       bh: H.zombies.filter(z => z.k === 'boss').reduce((a, z) => Math.max(a, +(z.hp / z.max).toFixed(3)), 0),
       zs: H.zombies.map(z => [z.id, +z.x.toFixed(2), +z.z.toFixed(2), +z.yaw.toFixed(2), z.rise > 0 ? 1 : 0, z.run, z.attacking ? 1 : 0, z.k === 'dog' ? 1 : z.k === 'boss' ? 2 : 0]),
-      md: H.mode, sm: H.startMode, sc: H.scene, nu: H.nachtOpen ? 1 : 0, tf: H.transfer ? [H.transfer.to, Math.ceil(H.transfer.t)] : null,
+      md: H.mode, cr: H.creative ? 1 : 0, sm: H.startMode, sc: H.scene, nu: H.nachtOpen ? 1 : 0, tf: H.transfer ? [H.transfer.to, Math.ceil(H.transfer.t)] : null,
       ps: players.map(p => ({ id: p.id, n: p.name, c: p.col, ch: p.ch, sp: p.sp ? 1 : 0, x: +p.x.toFixed(2), y: +p.y.toFixed(2), z: +p.z.toFixed(2), yaw: +p.yaw.toFixed(3), pi: +p.pitch.toFixed(3),
         hp: Math.round(p.hp), mh: maxHp(p), pts: p.pts, dn: p.down ? 1 : 0, dd: p.dead ? 1 : 0, bl: +p.bleed.toFixed(1), rv: +(p.rev / 3).toFixed(2), w: p.w, f: p.f, pk: p.perks.join(''), sh: Math.round(p.shield), sn: p.shieldN })),
       dr: H.drops.map(d => [d.id, d.k, +d.x.toFixed(2), +d.z.toFixed(2), +d.t.toFixed(1)]),
     });
   }
+}
+// creative mode (host only, unlocked with the server's CREATIVE_KEY): god mode, chosen points and round,
+// power on and every part in hand so the Launch Terminal and the cannon can be built straight away. Never ranked.
+function applyCreative() {
+  const H = host, cr = H.creative;
+  for (const p of playerList()) p.pts = cr.pts;
+  if (!H.power) { H.power = true; if (!doorsOpen['0']) openDoor('0'); broadcast(ev('power', { name: 'Creative mode' })); }
+  H.partTaken = PART_LIST.map(() => true);
+  H.round = cr.round - 1;
+  H.nextBoss = Math.max(10, cr.round); H.nextDog = cr.round > 5 ? cr.round + 1 : 5;
+  if (H.nextDog === H.nextBoss) H.nextDog++;
+  feedAll(`Creative mode — god mode, ${cr.pts.toLocaleString()} points, power on, all parts in hand (not ranked)`, '#8f8');
 }
 function hostRestart() {
   const keepPlayers = playerList();
@@ -1734,6 +1762,7 @@ function hostRestart() {
   });
   host.order = keepPlayers.length;
   for (const p of keepPlayers) sendTo(p.id, ev('reset', { x: p.x, z: p.z }));
+  if (host.creative) applyCreative();
 }
 
 // =====================================================================
@@ -3822,6 +3851,12 @@ function showGameOver(m) {
 
 // ---------- menus ----------
 function renderModes(m) {
+  if (m.cr) {
+    $('modeInfo').className = 'ready'; $('modeInfo').textContent = `Creative mode — ${m.ps.length} player${m.ps.length > 1 ? 's' : ''}, god mode, not ranked`;
+    $('startBtn').disabled = false; $('startBtn').textContent = 'Start creative';
+    document.querySelectorAll('#modeRow button').forEach(b => { b.disabled = true; b.classList.remove('on'); });
+    return;
+  }
   const need = MODE_SIZE[m.md], have = m.ps.length;
   document.querySelectorAll('#modeRow button').forEach(b => { b.classList.toggle('on', b.dataset.mode === m.md); b.disabled = !net.isHost; b.setAttribute('aria-checked', b.dataset.mode === m.md); });
   const ready = have === need;
@@ -3891,6 +3926,25 @@ function readName() { myName = ($('name').value.trim() || 'Survivor').slice(0, 1
 try { $('name').value = localStorage.getItem('ds_name') || ''; const s = localStorage.getItem('ds_sens'); if (s) $('sens').value = s; } catch (e) {}
 sens = +$('sens').value;
 $('sens').addEventListener('input', () => { sens = +$('sens').value; try { localStorage.setItem('ds_sens', sens); } catch (e) {} });
+// creative mode unlock: open the site with ?creative, enter the key set as CREATIVE_KEY on the server
+let CREATIVE = null;
+if (/[?&#]creative\b/.test(location.search + location.hash)) {
+  $('creativeBox').classList.remove('hidden');
+  try { $('crKey').value = localStorage.getItem('ds_ckey') || ''; } catch (e) {}
+}
+$('crBtn').onclick = async () => {
+  const st = $('crStatus'), key = $('crKey').value.trim();
+  if (!(await useRelay())) { st.textContent = 'Creative mode needs the game server (open it from the site link).'; return; }
+  st.className = ''; st.textContent = 'Checking…';
+  let ok = false;
+  try { ok = (await (await fetch('creative', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ key }) })).json()).ok; } catch (e) {}
+  if (!ok) { CREATIVE = null; st.textContent = 'Wrong key (or CREATIVE_KEY is not set on the server).'; return; }
+  const pts = Math.max(0, Math.min(99999999, Math.floor(+$('crPts').value || 0))), round = Math.max(1, Math.min(99, Math.floor(+$('crRound').value || 1)));
+  CREATIVE = { pts, round };
+  try { localStorage.setItem('ds_ckey', key); } catch (e) {}
+  st.className = 'on'; st.textContent = `Creative ON — ${pts.toLocaleString()} points, round ${round}. Now press Host a game.`;
+  $('crBtn').textContent = 'Update creative settings';
+};
 $('hostBtn').onclick = () => { initAudio(); readName(); hostGame(); };
 $('joinBtn').onclick = () => { initAudio(); readName(); joinGame($('joinCode').value); };
 $('joinCode').addEventListener('keydown', e => { if (e.key === 'Enter') $('joinBtn').click(); });

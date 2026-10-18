@@ -84,6 +84,7 @@ async function fetchTopChart() {
   return top.data;
 }
 const lastPost = new Map();
+const lastTry = new Map(); // creative-key attempts per IP
 function addScore(body) {
   const players = (Array.isArray(body.players) ? body.players : []).slice(0, 8).map(p => ({
     n: String(p && p.n || 'Survivor').replace(/[<>&"\u0000-\u001f]/g, '').trim().slice(0, 14) || 'Survivor',
@@ -126,6 +127,23 @@ const server = http.createServer((req, res) => {
       try { out = addScore(JSON.parse(body)); } catch (e) { out = { error: 'bad json' }; }
       res.writeHead(out.error ? 400 : 200, { 'content-type': 'application/json', 'cache-control': 'no-store' });
       res.end(JSON.stringify(out));
+    });
+  } else if (pathname === '/creative' && req.method === 'POST') {
+    // creative mode unlock: the key is CREATIVE_KEY in Railway's Variables (no key set = creative mode off)
+    const ip = req.socket.remoteAddress, t = Date.now();
+    if (t - (lastTry.get(ip) || 0) < 2000) { res.writeHead(429); return res.end('{"ok":false,"error":"slow down"}'); }
+    lastTry.set(ip, t);
+    let body = '';
+    req.on('data', d => { body += d; if (body.length > 1024) req.destroy(); });
+    req.on('end', () => {
+      let ok = false;
+      try {
+        const want = String(process.env.CREATIVE_KEY || ''), got = String(JSON.parse(body).key || '');
+        const h = x => crypto.createHash('sha256').update(x).digest();
+        ok = want.length >= 8 && crypto.timingSafeEqual(h(want), h(got));
+      } catch (e) {}
+      res.writeHead(200, { 'content-type': 'application/json', 'cache-control': 'no-store' });
+      res.end(JSON.stringify({ ok }));
     });
   } else if (pathname === '/config') {
     // the token's contract address, set as TOKEN_CA in Railway's Variables (optional TOKEN_URL for a link)
