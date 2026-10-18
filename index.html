@@ -362,6 +362,10 @@
   #menu .xlink { color:var(--ink); text-decoration:none; border:1px solid #2f5a22; padding:2px 10px; font-size:18px; }
   #menu .xlink:hover { border-color:var(--red); color:var(--red); }
   #menu .xlink.big { align-self:flex-start; font-family:Oswald, sans-serif; font-size:16px; letter-spacing:2px; text-transform:uppercase; padding:10px 16px; }
+  #menu .paper { max-width:1180px; margin:0 auto; padding-inline:max(20px, env(safe-area-inset-left, 0px)); padding-block:24px 32px; display:flex; flex-direction:column; gap:14px; }
+  #menu .paper h2 { margin:0; font-family:VT323, monospace; font-weight:400; font-size:22px; letter-spacing:3px; text-transform:uppercase; color:#c4e6a2; }
+  #menu .pwrap { display:block; max-width:760px; border:1px solid var(--line); box-shadow:0 0 40px rgba(109,255,46,.12); }
+  #menu .pwrap img { display:block; width:100%; height:auto; aspect-ratio:1600/2000; }
   @media (max-width:900px) { #menu .chapters { grid-template-columns:repeat(2, minmax(0, 1fr)); } }
   @media (max-width:520px) { #menu .chapters { grid-template-columns:minmax(0, 1fr); } #menu .slead { font-size:16px; } }
 </style>
@@ -499,6 +503,12 @@
     </ol>
     <p class="snote">The coin you launch in the game exists only for that run. It isn't a real token and nothing is bought or sold.</p>
     <a class="xlink big" href="https://x.com/Brainzzz___" target="_blank" rel="noopener noreferrer">Follow @Brainzzz___ on X ↗</a>
+  </section>
+  <section class="paper" id="paper" aria-labelledby="paperTitle">
+    <h2 id="paperTitle">The Brainzzz Paper</h2>
+    <p class="slead">The whole launch mechanic on one page: the five pieces, the coin specs, the price engine and the squad math.</p>
+    <a class="pwrap" href="media/brainzzz-whitepaper.jpg" target="_blank" rel="noopener"><img src="media/brainzzz-whitepaper.jpg" alt="The Brainzzz Paper: how to find the 5 pieces, build the Launch Terminal and launch a coin inside the game, with the coin specs and how kills, rounds, The Brute and downs move the price" loading="lazy" width="1600" height="2000"></a>
+    <a class="xlink big" href="media/brainzzz-whitepaper.jpg" target="_blank" rel="noopener">Open full size ↗</a>
   </section>
   <footer class="fine">A fan-made blocky parody. Not affiliated with any game studio or with the real people its survivors are based on.</footer>
 </div>
