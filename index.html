@@ -359,6 +359,12 @@
   #menu .snote { margin:0; font-size:13px; color:var(--dim); }
   #menu .chapters li p { margin:0; }
   #menu .story .eyebrow { text-align:left; justify-content:flex-start; }
+  #menu .livebar { display:flex; flex-wrap:wrap; justify-content:center; gap:4px 26px; padding:7px 16px; border-bottom:1px solid var(--line); background:rgba(4,10,5,.85); font-family:VT323, monospace; font-size:20px; letter-spacing:1px; color:var(--dim); }
+  #menu .livebar b { color:var(--ink); font-weight:400; font-variant-numeric:tabular-nums; margin-right:6px; }
+  #menu .livebar .ldot { display:inline-block; width:9px; height:9px; border-radius:50%; background:#3a5a32; margin-right:8px; vertical-align:1px; }
+  #menu .livebar .ldot.on { background:var(--red); box-shadow:0 0 8px var(--red); animation:lpulse 1.6s ease-in-out infinite; }
+  @keyframes lpulse { 50% { opacity:.45; } }
+  @media (prefers-reduced-motion: reduce) { #menu .livebar .ldot.on { animation:none; } }
   #menu .xlink { color:var(--ink); text-decoration:none; border:1px solid #2f5a22; padding:2px 10px; font-size:18px; }
   #menu .xlink:hover { border-color:var(--red); color:var(--red); }
   #menu .xlink.big { align-self:flex-start; font-family:Oswald, sans-serif; font-size:16px; letter-spacing:2px; text-transform:uppercase; padding:10px 16px; }
@@ -376,10 +382,16 @@
   <div class="ticker" aria-hidden="true"><div class="tk" id="ticker"></div></div>
   <div class="cabar" id="cabar">
     <span class="calabel">CA:</span>
-    <code id="caText">coming soon</code>
-    <button id="caCopy" class="ghost hidden" aria-label="Copy contract address">Copy</button>
-    <a id="caLink" class="hidden" target="_blank" rel="noopener noreferrer">View chart ↗</a>
+    <code id="caText">6mYypoPfoAasAtrGh1GPd3GyaUamwwGdwGF8eXM6pump</code>
+    <button id="caCopy" class="ghost" aria-label="Copy contract address">Copy</button>
+    <a id="caLink" href="https://pump.fun/coin/6mYypoPfoAasAtrGh1GPd3GyaUamwwGdwGF8eXM6pump" target="_blank" rel="noopener noreferrer">View chart ↗</a>
     <a class="xlink" href="https://x.com/Brainzzz___" target="_blank" rel="noopener noreferrer" aria-label="Brainzzz on X">𝕏 @Brainzzz___</a>
+  </div>
+  <div class="livebar hidden" id="livebar" aria-live="polite">
+    <span><i class="ldot" id="liveDot"></i><b id="stLive">0</b> playing now</span>
+    <span><b id="stRuns">0</b> runs played</span>
+    <span><b id="stKills">0</b> zombies killed</span>
+    <span><b id="stSurv">0</b> survivors</span>
   </div>
   <div class="land">
     <section class="hero">
@@ -4040,7 +4052,7 @@ async function loadTrending() {
 loadTrending(); setInterval(loadTrending, 120000);
 loadTopChart(); setInterval(loadTopChart, 120000);
 // contract address bar: LAUNCH_CA below, or TOKEN_CA on the server (server wins); shows "coming soon" until either is set
-const LAUNCH_CA = '', LAUNCH_URL = '';
+const LAUNCH_CA = '6mYypoPfoAasAtrGh1GPd3GyaUamwwGdwGF8eXM6pump', LAUNCH_URL = '';
 function showCA(ca, url) {
   if (/^[1-9A-HJ-NP-Za-km-z]{32,48}$/.test(ca || '')) { $('caText').textContent = ca; $('caText').classList.remove('soon'); $('caCopy').classList.remove('hidden'); }
   if (/^https:\/\/[^\s"<>]+$/.test(url || '')) { $('caLink').href = url; $('caLink').classList.remove('hidden'); }
@@ -4050,7 +4062,26 @@ async function loadCA() {
   if (!(await useRelay())) return;
   try { const d = await (await fetch('config', { cache: 'no-store' })).json(); showCA(d.ca, d.url || (d.ca && 'https://pump.fun/coin/' + d.ca)); } catch (e) {}
 }
-if (!LAUNCH_CA) $('caText').classList.add('soon'); loadCA();
+if (!LAUNCH_CA) if (!LAUNCH_CA) $('caText').classList.add('soon'); loadCA();
+// live counter: real players in open rooms right now, plus all-time totals from finished runs (from the server)
+const statShown = {};
+function tweenStat(id, to) {
+  const el = $(id), from = statShown[id] ?? 0; statShown[id] = to;
+  if (from === to) { el.textContent = to.toLocaleString(); return; }
+  const t0 = performance.now(), dur = 900;
+  const step = n => { const k = Math.min(1, (n - t0) / dur), v = Math.round(from + (to - from) * (1 - Math.pow(1 - k, 3))); el.textContent = v.toLocaleString(); if (k < 1) requestAnimationFrame(step); };
+  requestAnimationFrame(step);
+}
+async function loadStats() {
+  if (!(await useRelay())) return;
+  try {
+    const d = await (await fetch('stats', { cache: 'no-store' })).json();
+    $('livebar').classList.remove('hidden');
+    tweenStat('stLive', d.players | 0); tweenStat('stRuns', d.runs | 0); tweenStat('stKills', d.kills | 0); tweenStat('stSurv', d.survivors | 0);
+    $('liveDot').classList.toggle('on', d.players > 0);
+  } catch (e) {}
+}
+loadStats(); setInterval(loadStats, 10000);
 $('caCopy').onclick = () => {
   const t = $('caText').textContent, done = () => { $('caCopy').textContent = 'Copied'; setTimeout(() => $('caCopy').textContent = 'Copy', 1500); };
   const fallback = () => { const r = document.createRange(); r.selectNodeContents($('caText')); const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r); try { document.execCommand('copy'); done(); } catch (e) {} };

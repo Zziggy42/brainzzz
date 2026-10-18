@@ -21,6 +21,17 @@ let board = { solo: [], duo: [], squad: [] };
 const counts = e => e.round >= 2 || e.kills > 0;
 try { const saved = JSON.parse(fs.readFileSync(LB_FILE, 'utf8')); for (const m of MODES) if (Array.isArray(saved[m])) board[m] = saved[m].filter(counts); } catch (e) {}
 const rankOrder = (a, b) => b.round - a.round || b.kills - a.kills || a.at - b.at; // highest round, then most kills, then first to get there
+// ---- all-time stats (only ever go up): finished runs, zombies killed, distinct survivor names ----
+const STATS_FILE = path.join(DATA_DIR, 'stats.json');
+let stats = { runs: 0, kills: 0, names: [] };
+try { const s = JSON.parse(fs.readFileSync(STATS_FILE, 'utf8')); stats = { runs: +s.runs || 0, kills: +s.kills || 0, names: Array.isArray(s.names) ? s.names.slice(0, 100000) : [] }; } catch (e) {}
+if (!fs.existsSync(STATS_FILE)) for (const m of MODES) for (const e of board[m]) { // first run: start from the leaderboard history
+  stats.runs++; stats.kills += e.kills || 0;
+  for (const p of e.players || []) { const key = String(p.n || '').toLowerCase(); if (key && key !== 'survivor' && !stats.names.includes(key)) stats.names.push(key); }
+}
+const nameSet = new Set(stats.names);
+function saveStats() { const tmp = STATS_FILE + '.tmp'; fs.writeFile(tmp, JSON.stringify(stats), err => { if (!err) fs.rename(tmp, STATS_FILE, () => {}); }); }
+function liveCount() { let players = 0; for (const r of rooms.values()) players += 1 + r.clients.size; return { players, rooms: rooms.size }; }
 function saveBoard() {
   const tmp = LB_FILE + '.tmp';
   fs.writeFile(tmp, JSON.stringify(board), err => { if (!err) fs.rename(tmp, LB_FILE, () => {}); });
@@ -101,6 +112,9 @@ function addScore(body) {
   const list = board[mode];
   if (list.some(e => e.gid === gid)) return { mode, rank: list.findIndex(e => e.gid === gid) + 1, top: list.slice(0, 5) };
   const entry = { gid, round, kills: players.reduce((a, p) => a + p.k, 0), players, at: Date.now() };
+  stats.runs++; stats.kills += entry.kills;
+  for (const p of players) { const key = p.n.toLowerCase(); if (key !== 'survivor' && !nameSet.has(key) && nameSet.size < 100000) { nameSet.add(key); stats.names.push(key); } }
+  saveStats();
   list.push(entry); list.sort(rankOrder); list.length = Math.min(list.length, KEEP);
   saveBoard();
   const i = list.indexOf(entry);
@@ -159,6 +173,9 @@ const server = http.createServer((req, res) => {
       res.writeHead(200, { 'content-type': 'application/json', 'cache-control': 'no-store' });
       res.end(JSON.stringify({ ok }));
     });
+  } else if (pathname === '/stats') {
+    res.writeHead(200, { 'content-type': 'application/json', 'cache-control': 'no-store' });
+    res.end(JSON.stringify(Object.assign(liveCount(), { runs: stats.runs, kills: stats.kills, survivors: nameSet.size })));
   } else if (pathname === '/config') {
     // the token's contract address, set as TOKEN_CA in Railway's Variables (optional TOKEN_URL for a link)
     const ca = String(process.env.TOKEN_CA || '').trim(), url = String(process.env.TOKEN_URL || '').trim();
