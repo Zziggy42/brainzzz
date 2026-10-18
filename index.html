@@ -6,8 +6,8 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Brain Rot">
-<title>Brain Rot</title>
+<meta name="apple-mobile-web-app-title" content="Brainzzz">
+<title>Brainzzz</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Creepster&family=Oswald:wght@400;600&family=VT323&display=swap" rel="stylesheet">
 <style>
@@ -310,7 +310,7 @@
   body.touch #downUI .big { font-size:36px; }
   @media (max-width:640px){ #round{font-size:64px;} #announce{font-size:40px;} #miniWrap,#mini{width:130px;} #mini{height:130px;} #feed{top:170px;} }
   @media (prefers-reduced-motion: reduce){ .pop, #feed div { animation-duration:.01s; } }
-  /* ---- Brain Rot landing theme: toxic green (landing page only; the game keeps its own colours) ---- */
+  /* ---- Brainzzz landing theme: toxic green (landing page only; the game keeps its own colours) ---- */
   #menu { --red:#6dff2e; --ink:#e4f2d8; --dim:#86a07a; --slime:#d7ff3a; --deep:#050b06; --line:#1d3a18; --panel:rgba(7,16,8,.9);
     background:linear-gradient(90deg, rgba(4,10,5,.95) 0%, rgba(4,10,5,.84) 42%, rgba(4,12,5,.62) 72%, rgba(4,10,5,.8) 100%), radial-gradient(ellipse at 80% 30%, rgba(109,255,46,.12), transparent 60%); }
   #menu::after { content:""; position:fixed; inset:0; pointer-events:none; z-index:-2; -webkit-backdrop-filter:hue-rotate(105deg) saturate(1.15); backdrop-filter:hue-rotate(105deg) saturate(1.15); }
@@ -356,7 +356,7 @@
   <div class="land">
     <section class="hero">
       <div class="eyebrow">Co-op zombie survival <i>·</i> solo, duo or squad of 4 <i>·</i> free in your browser</div>
-      <h1 class="title">Brain Rot</h1>
+      <h1 class="title">Brainzzz</h1>
       <div class="reel">Now showing: <b>Final Reel</b></div>
       <p class="pitch">An abandoned cinema. The power's out, the doors are boarded up, and something is climbing through the windows. Clear a path to the theater, get the projector running and find out how many rounds your crew can last.</p>
       <div id="invite" class="invite hidden">You've been invited to room <b id="inviteCode"></b>. Type your name and press <strong>Join</strong>.</div>
@@ -499,7 +499,7 @@
   <button class="tb" id="tKnife" aria-label="Knife">KNIFE</button>
   <button class="tb" id="tUse" aria-label="Use">USE</button>
 </div>
-<div id="rotate"><b>Turn sideways</b>Brain Rot plays in landscape — rotate your phone.</div>
+<div id="rotate"><b>Turn sideways</b>Brainzzz plays in landscape — rotate your phone.</div>
 
 <div id="pause" class="overlay hidden" style="pointer-events:auto">
   <h2>Click to play</h2>
@@ -3816,7 +3816,7 @@ function lbTable(rows, mineGid) {
 }
 function renderLanding() {
   document.querySelectorAll('.lbtabs button').forEach(b => b.classList.toggle('on', b.dataset.m === lbMode));
-  $('lbLanding').innerHTML = lbData ? lbTable(lbData[lbMode].slice(0, 10)) : '<div class="lbempty">The leaderboard is saved on the game server — open the game from a Brain Rot link to see it.</div>';
+  $('lbLanding').innerHTML = lbData ? lbTable(lbData[lbMode].slice(0, 10)) : '<div class="lbempty">The leaderboard is saved on the game server — open the game from a Brainzzz link to see it.</div>';
 }
 async function loadLeaderboard() {
   if (!(await useRelay())) { lbData = null; return renderLanding(); }
