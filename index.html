@@ -341,6 +341,29 @@
   #menu .feats li { color:#a9c29a; border-left-color:#3d8a1c; }
   #menu .keys kbd { background:#0b1a0a; border-color:#264a1e; }
   #menu .fine { color:#5f7656; }
+  /* trailer + story (landing) */
+  #menu .trailer, #menu .story { max-width:1180px; margin:0 auto; padding-inline:max(20px, env(safe-area-inset-left, 0px)); padding-block:24px; }
+  #menu .trailer h2 { margin:0 0 12px; font-family:VT323, monospace; font-weight:400; font-size:22px; letter-spacing:3px; text-transform:uppercase; color:#c4e6a2; }
+  #menu .vwrap { border:1px solid var(--line); background:#000; box-shadow:0 0 40px rgba(109,255,46,.12); }
+  #menu .vwrap video { display:block; width:100%; height:auto; aspect-ratio:16/9; background:#000; }
+  #menu .story { display:flex; flex-direction:column; gap:16px; padding-block:40px 24px; }
+  #menu .stitle { margin:0; font-family:Creepster, cursive; font-weight:400; font-size:clamp(34px, 5.4vw, 64px); line-height:1.05; color:var(--red); letter-spacing:2px; text-shadow:0 0 18px rgba(109,255,46,.35); text-wrap:balance; }
+  #menu .slead { margin:0; max-width:64ch; font-size:18px; line-height:1.55; color:#c9dcbc; }
+  #menu .chapters { list-style:none; margin:8px 0 0; padding:0; display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:14px; }
+  #menu .chapters li { display:flex; flex-direction:column; background:rgba(4,12,5,.78); border:1px solid var(--line); }
+  #menu .chapters img { display:block; width:100%; height:auto; aspect-ratio:960/444; object-fit:cover; border-bottom:1px solid var(--line); }
+  #menu .chapters li > div { display:flex; flex-direction:column; gap:4px; padding:12px 14px 16px; font-size:14px; line-height:1.5; color:#a9c29a; }
+  #menu .chapters .cn { font-family:VT323, monospace; font-size:20px; color:var(--slime); letter-spacing:2px; }
+  #menu .chapters b { font-size:20px; color:var(--ink); font-weight:600; letter-spacing:1px; text-transform:uppercase; }
+  #menu .chapters kbd, #menu .story kbd { font-family:VT323, monospace; font-size:16px; color:var(--ink); background:#0b1a0a; border:1px solid #264a1e; border-bottom-width:3px; padding:0 6px; }
+  #menu .snote { margin:0; font-size:13px; color:var(--dim); }
+  #menu .chapters li p { margin:0; }
+  #menu .story .eyebrow { text-align:left; justify-content:flex-start; }
+  #menu .xlink { color:var(--ink); text-decoration:none; border:1px solid #2f5a22; padding:2px 10px; font-size:18px; }
+  #menu .xlink:hover { border-color:var(--red); color:var(--red); }
+  #menu .xlink.big { align-self:flex-start; font-family:Oswald, sans-serif; font-size:16px; letter-spacing:2px; text-transform:uppercase; padding:10px 16px; }
+  @media (max-width:900px) { #menu .chapters { grid-template-columns:repeat(2, minmax(0, 1fr)); } }
+  @media (max-width:520px) { #menu .chapters { grid-template-columns:minmax(0, 1fr); } #menu .slead { font-size:16px; } }
 </style>
 </head>
 <body>
@@ -352,6 +375,7 @@
     <code id="caText">coming soon</code>
     <button id="caCopy" class="ghost hidden" aria-label="Copy contract address">Copy</button>
     <a id="caLink" class="hidden" target="_blank" rel="noopener noreferrer">View chart ↗</a>
+    <a class="xlink" href="https://x.com/Brainzzz___" target="_blank" rel="noopener noreferrer" aria-label="Brainzzz on X">𝕏 @Brainzzz___</a>
   </div>
   <div class="land">
     <section class="hero">
@@ -455,6 +479,27 @@
       </div>
     </aside>
   </div>
+  <section class="trailer" id="trailer" aria-labelledby="trailerTitle">
+    <h2 id="trailerTitle">Watch the trailer</h2>
+    <div class="vwrap"><video id="trailerVid" controls playsinline preload="none" poster="media/trailer-poster.jpg" src="media/brainzzz-trailer.mp4"></video></div>
+  </section>
+  <section class="story" id="story" aria-labelledby="storyTitle">
+    <div class="eyebrow">The twist <i>·</i> one coin per run</div>
+    <h2 class="stitle" id="storyTitle">5 pieces. 1 computer.<br>Launch a coin, inside a zombie game.</h2>
+    <p class="slead">Somewhere in the cinema, someone left a computer in pieces. Find all five while the horde hunts you, build it on the workbench, and you can launch your own coin from inside the game, then watch it pump live on the big screen while your squad holds the line.</p>
+    <ol class="chapters">
+      <li><img src="media/story-scavenge.jpg" alt="A survivor grabbing a glowing computer part" loading="lazy" width="960" height="444">
+        <div><span class="cn">01</span><b>Scavenge</b><p>A Motherboard, Monitor, Keyboard, Hard Drive and Wi-Fi Antenna are hidden across the map, in different rooms every run. Buy doors and push deeper to reach them.</p></div></li>
+      <li><img src="media/story-build.jpg" alt="The Launch Terminal snapping together on the workbench" loading="lazy" width="960" height="444">
+        <div><span class="cn">02</span><b>Build</b><p>Carry all five to the workbench in the Maker Space and press <kbd>F</kbd>. The Launch Terminal boots up.</p></div></li>
+      <li><img src="media/story-launch.jpg" alt="The Create coin screen with Brainzzz typed in" loading="lazy" width="960" height="444">
+        <div><span class="cn">03</span><b>Launch</b><p>Press <kbd>P</kbd>, name your coin, pick a ticker, drop in an image and hit Create coin, just like a real launchpad, mid-round.</p></div></li>
+      <li><img src="media/story-pump.jpg" alt="The squad fighting under the theater screen showing the coin chart" loading="lazy" width="960" height="444">
+        <div><span class="cn">04</span><b>Pump it</b><p>Your coin goes live on the theater screen. Kills pump it, downs dump it, and killing The Brute sends it to the moon. How high can your squad take it?</p></div></li>
+    </ol>
+    <p class="snote">The coin you launch in the game exists only for that run. It isn't a real token and nothing is bought or sold.</p>
+    <a class="xlink big" href="https://x.com/Brainzzz___" target="_blank" rel="noopener noreferrer">Follow @Brainzzz___ on X ↗</a>
+  </section>
   <footer class="fine">A fan-made blocky parody. Not affiliated with any game studio or with the real people its survivors are based on.</footer>
 </div>
 
@@ -3913,6 +3958,7 @@ $('charGrid').addEventListener('click', e => {
 });
 $('spawnBtn').onclick = () => { sendToHost({ t: 'spawn' }); lateJoin = false; beginGame(); requestLock(); };
 function beginGame() {
+  try { $('trailerVid').pause(); } catch (e) {}
   if (gameStarted) return;
   gameStarted = true;
   $('menu').classList.add('hidden'); $('hud').classList.remove('hidden');

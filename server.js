@@ -113,6 +113,19 @@ const server = http.createServer((req, res) => {
   if (pathname === '/' || pathname === '/index.html') {
     res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' });
     fs.createReadStream(GAME).pipe(res);
+  } else if (pathname.startsWith('/media/')) {
+    // trailer + landing images, from the media folder next to this file (Range support so phones can seek the video)
+    const name = path.basename(pathname), ext = path.extname(name).toLowerCase(), types = { '.mp4': 'video/mp4', '.jpg': 'image/jpeg', '.png': 'image/png' };
+    const file = path.join(__dirname, 'media', name);
+    if (!types[ext] || name !== decodeURIComponent(pathname.slice(7)) || !fs.existsSync(file)) { res.writeHead(404); return res.end(); }
+    const size = fs.statSync(file).size, range = /^bytes=(\d*)-(\d*)$/.exec(req.headers.range || '');
+    const head = { 'content-type': types[ext], 'accept-ranges': 'bytes', 'cache-control': 'public, max-age=3600' };
+    if (range && (range[1] || range[2])) {
+      let start = range[1] ? +range[1] : Math.max(0, size - +range[2]), end = range[1] && range[2] ? Math.min(+range[2], size - 1) : size - 1;
+      if (start >= size || start > end) { res.writeHead(416, { 'content-range': `bytes */${size}` }); return res.end(); }
+      res.writeHead(206, Object.assign(head, { 'content-range': `bytes ${start}-${end}/${size}`, 'content-length': end - start + 1 }));
+      fs.createReadStream(file, { start, end }).pipe(res);
+    } else { res.writeHead(200, Object.assign(head, { 'content-length': size })); fs.createReadStream(file).pipe(res); }
   } else if (pathname === '/leaderboard' && req.method === 'GET') {
     res.writeHead(200, { 'content-type': 'application/json', 'cache-control': 'no-store' });
     res.end(JSON.stringify({ solo: board.solo.slice(0, 25), duo: board.duo.slice(0, 25), squad: board.squad.slice(0, 25) }));
